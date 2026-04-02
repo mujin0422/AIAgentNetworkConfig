@@ -1,0 +1,16 @@
+# LangGraph và LangChain (phiên bản mới nhất tương thích)
+langgraph==1.1.3
+langchain==1.2.12
+langchain-core==1.2.22
+langchain-community==0.4.1
+langchain-text-splitters==1.1.1
+langchain-ollama==1.0.1
+ollama==0.6.1
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
+typing-extensions==4.15.0ch
+
+# Network automation
+netmiko>=4.3.0
