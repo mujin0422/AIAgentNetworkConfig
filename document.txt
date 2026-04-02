@@ -1,0 +1,54 @@
+network-ai-assistant/
+├── README.md
+├── requirements.txt
+├── .env.example
+├── src/
+│   ├── __init__.py
+│   ├── main.py                    # Entry point
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── supervisor.py          # Supervisor Agent
+│   │   ├── network_expert.py      # Network Expert Agent  
+│   │   ├── analyst.py             # Analysis & Reporting Agent
+│   │   └── base.py                # Base agent classes
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   ├── network_tools.py       # Netmiko/NAPALM integration
+│   │   ├── parser_tools.py        # Log/Config parsing
+│   │   └── reporting_tools.py     # Report generation
+│   ├── graph/
+│   │   ├── __init__.py
+│   │   ├── state.py               # State definitions
+│   │   └── workflow.py             # LangGraph workflow
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── network_device.py      # Device models
+│   │   └── incidents.py           # Incident models
+│   ├── utils/
+│   │   ├── logger.py
+│   │   ├── config.py
+│   │   └── validators.py
+│   └── db/
+│       ├── __init__.py
+│       └── checkpoint.py           # SQLite checkpointer
+├── tests/
+│   ├── test_agents.py
+│   ├── test_tools.py
+│   └── test_workflow.py
+├── config/
+│   └── devices.yaml                # Device inventory
+├── logs/
+│   └── app.log
+└── data/
+    └── conversations.db            # SQLite database
+
+
+
+pip install -r requirements.txt
+python -m venv venv
+venv\Scripts\activate
+
+ollama list
+ollama pull deepseek-v3.1:671b-cloud
+
+python -m src.main
