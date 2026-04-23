@@ -12,14 +12,20 @@ class SupervisorAgent:
         if state.get("current_phase") == "analyzed":
             if last_message and last_message.type == "ai" and not getattr(last_message, 'tool_calls', None):
                 print("\033[95m[SUPERVISOR] Phân tích hoàn tất. Kết thúc workflow.\033[0m")
-                return Command(goto=END, update={"current_phase": "finished"})
+                return Command(
+                    goto=END, 
+                    update={"current_phase": "finished"}
+                )
 
         # 2. XỬ LÝ NGOẠI LỆ: EXPERT HỎI LẠI VÌ THIẾU THÔNG TIN
         # Nếu tin nhắn cuối là từ AI (Expert) và nó KHÔNG dùng tool (Tức là nó đang hỏi/từ chối)
         if state.get("current_phase") in ["start", "collecting"]:
             if last_message and last_message.type == "ai" and not getattr(last_message, 'tool_calls', None):
                 print("\033[95m[SUPERVISOR] Expert đang yêu cầu thêm thông tin. Chuyển sang ➤ ANALYST ...\033[0m")
-                return Command(goto="analyst", update={"current_phase": "analyzing"})
+                return Command(
+                    goto="analyst", 
+                    update={"current_phase": "analyzing"}
+                )
 
         # 3. KIỂM TRA DỮ LIỆU BÌNH THƯỜNG
         has_tool_output = any(msg.type == "tool" for msg in messages)
