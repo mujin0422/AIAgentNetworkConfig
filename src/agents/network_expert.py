@@ -5,11 +5,23 @@ from src.tools.gns3_tools import(
     check_nodes_status,
     start_node
 )
-from src.tools.network_tools import (
+from tools.router_tools import (
     execute_show_command,
     ping_test,
     get_routing_table,
-    get_interface_ip
+    get_interface_ip,
+    config_ospf,          
+    config_static_route,   
+    get_ospf_neighbors,    
+    config_router_sub_interface
+)
+
+from tools.switch_tools import (
+    config_vlan,
+    assign_vlan_access_port,
+    assign_vlan_access_range,
+    config_switch_trunk,
+    get_vlan_brief
 )
 
 def create_network_expert():
@@ -20,7 +32,16 @@ def create_network_expert():
         execute_show_command,
         ping_test,
         get_routing_table,
-        get_interface_ip
+        get_interface_ip,
+        config_ospf,
+        config_static_route,          
+        get_ospf_neighbors,
+        config_router_sub_interface,
+        config_vlan, 
+        assign_vlan_access_port,
+        assign_vlan_access_range,
+        config_switch_trunk,
+        get_vlan_brief
     ]
     
     system_prompt = """

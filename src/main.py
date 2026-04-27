@@ -3,6 +3,7 @@ import yaml
 import requests
 import json
 import logging
+import warnings
 import time
 import textwrap
 from dotenv import load_dotenv
@@ -29,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 graphInstance = None
 deviceObjectInstance = None
+warnings.filterwarnings("ignore", message=".*Deserializing unregistered type.*")
 
 # --- GNS3 HELPER FUNCTIONS ---
-
-def check_gns3_connectivity() -> bool:
+def checkGNS3Connectivity() -> bool:
     """Kiểm tra kết nối tới GNS3 Server trước khi khởi động Agent"""
     try:
         response = requests.get(f"{BASE_URL}/version", timeout=5)
@@ -58,7 +59,7 @@ def initializeSystem() -> bool:
     
     print("\n\033[92m[HỆ THỐNG] Bắt đầu khởi tạo ứng dụng...\033[0m")
     
-    if not check_gns3_connectivity():
+    if not checkGNS3Connectivity():
         return False
     
     device_config = loadDeviceConfig()
@@ -109,96 +110,114 @@ def createDeviceConnection(device_config: dict):
 
 # --- PROCESS & FORMATTING ---
 
-def processQuery(query: str, thread_id: str = "default"):
+def processQuery(query: str, thread_id: str = "default", is_resume: bool = False):
     global graphInstance, deviceObjectInstance
     if not graphInstance: return
     
-    initial_state = NetworkState(
-        messages=[HumanMessage(content=query)],
-        target_device=deviceObjectInstance,
-        devices=[deviceObjectInstance] if deviceObjectInstance else []
-    )
-    
     config = {"configurable": {"thread_id": thread_id}}
-    
     print("\n\033[92m[HỆ THỐNG] Đang xử lý yêu cầu...\033[0m")
     
-    raw_outputs_to_print = {}
+    try:
+        # 1. GỌI ĐỒ THỊ (Khởi tạo mới hoặc Tiếp tục từ điểm bị ngắt)
+        if is_resume:
+            from langgraph.types import Command
+            stream_generator = graphInstance.stream(Command(resume=query), config)
+        else:
+            initial_state = NetworkState(
+                messages=[HumanMessage(content=query)],
+                target_device=deviceObjectInstance,
+                devices=[deviceObjectInstance] if deviceObjectInstance else []
+            )
+            stream_generator = graphInstance.stream(initial_state, config)
 
-    for chunk in graphInstance.stream(initial_state, config):
-        if "extract_data" in chunk:
-            raw_outputs_to_print = chunk["extract_data"].get("command_outputs", {})
+        raw_outputs_to_print = {}
 
-        if "analyst" in chunk:
-            # 2. IN KHUNG DỮ LIỆU RAW (NẾU CÓ)
-            if raw_outputs_to_print:
-                content_width = 120
-                frame_width = content_width + 4
-                
-                print("\n\t\033[96m" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
-                
-                title = "║ [RAW DATA] KẾT QUẢ THỰC THI TỪ THIẾT BỊ"
-                print("\t\033[96m" + title + " "*(frame_width - len(title) - 1) + "║\033[0m")
-                print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
-                
-                tool_count = len(raw_outputs_to_print)
-                current_tool = 0
-                
-                for tool_name, result in raw_outputs_to_print.items():
-                    current_tool += 1
-                    display_text = str(result)
-                    try:
-                        parsed_data = json.loads(display_text)
+        # 2. VÒNG LẶP XỬ LÝ VÀ IN DỮ LIỆU
+        for chunk in stream_generator:
+            if "extract_data" in chunk:
+                raw_outputs_to_print = chunk["extract_data"].get("command_outputs", {})
+
+            if "analyst" in chunk:
+                # --- IN KHUNG DỮ LIỆU RAW (NẾU CÓ) ---
+                if raw_outputs_to_print:
+                    content_width = 120
+                    frame_width = content_width + 4
+                    
+                    print("\n\t\033[96m" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
+                    
+                    title = "║ [RAW DATA] KẾT QUẢ THỰC THI TỪ THIẾT BỊ"
+                    print("\t\033[96m" + title + " "*(frame_width - len(title) - 1) + "║\033[0m")
+                    print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
+                    
+                    tool_count = len(raw_outputs_to_print)
+                    current_tool = 0
+                    
+                    for tool_name, result in raw_outputs_to_print.items():
+                        current_tool += 1
+                        display_text = str(result)
+                        try:
+                            parsed_data = json.loads(display_text)
+                            if isinstance(parsed_data, dict):
+                                if parsed_data.get("success") is False:
+                                    display_text = f"LỖI: {parsed_data.get('error', 'Không rõ nguyên nhân')}"
+                                elif "output" in parsed_data:
+                                    display_text = str(parsed_data["output"])
+                        except Exception:
+                            pass 
+
+                        tool_line = f"Tool đã dùng: {tool_name}"
+                        print("\t\033[96m║ \033[93m" + tool_line.ljust(content_width) + " \033[96m║\033[0m")
+                        print("\t\033[96m║ \033[90m" + "Output:".ljust(content_width) + " \033[96m║\033[0m")
                         
-                        if isinstance(parsed_data, dict):
-                            # 1. Kiểm tra nếu tool báo lỗi
-                            if parsed_data.get("success") is False:
-                                display_text = f"LỖI: {parsed_data.get('error', 'Không rõ nguyên nhân')}"
-                            # 2. Lấy đích danh trường "output" mà bạn vừa đồng nhất
-                            elif "output" in parsed_data:
-                                display_text = str(parsed_data["output"])
-                    except Exception:
-                        pass 
+                        for line in display_text.split('\n'):
+                            safe_line = line.replace('\r', '')[:content_width] 
+                            print("\t\033[96m║ \033[90m" + safe_line.ljust(content_width) + " \033[96m║\033[0m")
+                        
+                        if current_tool < tool_count:
+                            print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
 
-                    # In tên Tool
-                    tool_line = f"Tool đã dùng: {tool_name}"
-                    print("\t\033[96m║ \033[93m" + tool_line.ljust(content_width) + " \033[96m║\033[0m")
-                    print("\t\033[96m║ \033[90m" + "Output:".ljust(content_width) + " \033[96m║\033[0m")
-                    
-                    # In từng dòng kết quả (đã làm sạch)
-                    for line in display_text.split('\n'):
-                        # Cắt bỏ ký tự \r thừa và giới hạn độ dài dòng
-                        safe_line = line.replace('\r', '')[:content_width] 
-                        print("\t\033[96m║ \033[90m" + safe_line.ljust(content_width) + " \033[96m║\033[0m")
-                    
-                    if current_tool < tool_count:
-                        print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
+                    print("\t\033[96m" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m\n")
 
-                print("\t\033[96m" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m\n")
-
-            # 3. IN KHUNG PHÂN TÍCH CỦA ANALYST (Giữ nguyên cấu trúc cũ)
-            msg = chunk["analyst"].get("messages", [])[-1]
-            if hasattr(msg, 'content') and msg.content:
-                lines = msg.content.split('\n')
-                wrapped_lines = []
-                content_width = 120 
-                
-                for line in lines:
-                    if len(line) > content_width:
-                        wrapped_lines.extend(textwrap.wrap(line, width=content_width, replace_whitespace=False))
-                    else:
-                        wrapped_lines.append(line)
-                
-                frame_width = content_width + 4
-                print("\033[93m\t" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
-                title = "║ [ANALYST] PHẢN HỒI"
-                print("\033[93m\t" + title + " "*(frame_width - len(title) - 1) + "║" + "\033[0m")
-                
-                for line in wrapped_lines:
-                    content_line = "║ " + line.ljust(content_width) + " ║"
-                    print("\t" + content_line)
+                # --- IN KHUNG PHÂN TÍCH CỦA ANALYST ---
+                msg = chunk["analyst"].get("messages", [])[-1]
+                if hasattr(msg, 'content') and msg.content:
+                    lines = msg.content.split('\n')
+                    wrapped_lines = []
+                    content_width = 120 
                     
-                print("\033[93m\t" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m")
+                    for line in lines:
+                        if len(line) > content_width:
+                            wrapped_lines.extend(textwrap.wrap(line, width=content_width, replace_whitespace=False))
+                        else:
+                            wrapped_lines.append(line)
+                    
+                    frame_width = content_width + 4
+                    print("\033[93m\t" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
+                    title = "║ [ANALYST] PHẢN HỒI"
+                    print("\033[93m\t" + title + " "*(frame_width - len(title) - 1) + "║" + "\033[0m")
+                    
+                    for line in wrapped_lines:
+                        content_line = "║ " + line.ljust(content_width) + " ║"
+                        print("\t" + content_line)
+                        
+                    print("\033[93m\t" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m")
+
+        # 3. CHỐT CHẶN HITL: Kiểm tra trạng thái Graph sau khi vòng lặp dừng
+        state = graphInstance.get_state(config)
+        if state.tasks and state.tasks[0].interrupts:
+            interrupt_msg = state.tasks[0].interrupts[0].value
+            
+            print(f"\n\033[91m [CẢNH BÁO BẢO MẬT] AI YÊU CẦU QUYỀN THỰC THI:\033[0m")
+            print(f"\033[93m\t{interrupt_msg}\033[0m")
+            
+            # Hỏi ý kiến user
+            user_approval = input("\t\033[92m 👉 Bạn có đồng ý thực thi không? (yes/no): \033[0m").strip()
+            
+            # Gọi đệ quy hàm processQuery để mở khóa Graph tiếp tục chạy
+            processQuery(user_approval, thread_id=thread_id, is_resume=True)
+            
+    except Exception as e:
+        print(f"\n\033[91m[LỖI THỰC THI] {e}\033[0m")
 
 def interactiveMode():
     if not initializeSystem():

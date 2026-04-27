@@ -236,7 +236,7 @@ wr
 
 //========== CE-1A ==========//
 
-hostname  CE-1A
+hostname CE-1A
 ip domain-name aiagent.local
 crypto key generate rsa
 2048
@@ -253,13 +253,25 @@ no shut
 exit
 
 int f1/0
-ip add 172.16.1.1 255.255.255.0
+no ip add
 no shut
 exit
+
+interface f1/0.10
+encapsulation dot1Q 10
+ip address 172.16.1.1 255.255.255.128
+ex
+
+interface f1/0.20
+encapsulation dot1Q 20
+ip address 172.16.1.129 255.255.255.128
+ex
 
 router bgp 22041
 neighbor 192.168.1.1 remote-as 2204
 network 172.16.1.0 mask 255.255.255.0
+network 172.16.1.0 mask 255.255.255.128
+network 172.16.1.128 mask 255.255.255.128
 exit
 
 end
@@ -268,7 +280,7 @@ wr
 
 //========== CE-1B ==========//
 
-hostname  CE-1B
+hostname CE-1B
 ip domain-name aiagent.local
 crypto key generate rsa
 2048
@@ -300,7 +312,7 @@ wr
 
 //========== CE-2A ==========//
 
-hostname  CE-2A
+hostname CE-2A
 ip domain-name aiagent.local
 crypto key generate rsa
 2048
@@ -317,13 +329,25 @@ no shut
 exit
 
 int f1/0
-ip add 172.16.3.1 255.255.255.0
+no ip add
 no shut
 exit
+
+interface f1/0.10
+encapsulation dot1Q 10
+ip address 172.16.3.1 255.255.255.128
+ex
+
+interface f1/0.20
+encapsulation dot1Q 20
+ip address 172.16.3.129 255.255.255.128
+ex
 
 router bgp 22043
 neighbor 192.168.3.1 remote-as 2204
 network 172.16.3.0 mask 255.255.255.0
+network 172.16.3.0 mask 255.255.255.128
+network 172.16.3.128 mask 255.255.255.128
 exit
 
 end
@@ -332,7 +356,7 @@ wr
 
 //========== CE-2B ==========//
 
-hostname  CE-2B
+hostname CE-2B
 ip domain-name aiagent.local
 crypto key generate rsa
 2048
@@ -360,3 +384,164 @@ exit
 
 end
 wr
+
+
+//========== Switch1 ==========//
+
+hostname Switch1
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+vlan 10
+name KETOAN
+ex
+
+vlan 20
+name KYTHUAT
+exit
+
+interface f1/0
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+ex
+
+interface range f1/8 - 11
+switchport mode access
+switchport access vlan 10
+no shut
+ex 
+
+interface range f1/12 - 15
+switchport mode access
+switchport access vlan 20
+no shut
+ex
+
+end
+wr
+
+//========== Switch2 ==========//
+
+hostname Switch2
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+end
+wr
+
+//========== Switch3 ==========//
+
+hostname Switch3
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+vlan 10
+name KETOAN
+ex
+
+vlan 20
+name KYTHUAT
+exit
+
+interface f1/0
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+ex
+
+interface range f1/8 - 11
+switchport mode access
+switchport access vlan 10
+no shut
+ex 
+
+interface range f1/12 - 15
+switchport mode access
+switchport access vlan 20
+no shut
+ex
+
+end
+wr
+
+//========== Switch4 ==========//
+
+hostname Switch4
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+end
+wr
+
+//========== PC1 ==========//
+
+ip 172.16.1.10 255.255.255.0 172.16.1.1
+
+save
+
+//========== PC2 ==========//
+
+ip 172.16.1.130 255.255.255.128 172.16.1.129
+
+save
+
+//========== PC3 ==========//
+
+ip 172.16.2.10 255.255.255.0 172.16.2.1
+
+save
+
+//========== PC4 ==========//
+
+ip 172.16.3.10 255.255.255.0 172.16.3.1
+
+save
+
+//========== PC5 ==========//
+
+ip 172.16.3.130 255.255.255.128 172.16.3.129
+
+save
+
+//========== PC6 ==========//
+
+ip 172.16.4.10 255.255.255.0 172.16.4.1
+
+save
