@@ -54,28 +54,28 @@ CE-2B:
   username: "admin"
   password: "123456"
 
-Switch 1:
+Switch1:
   hostname: "127.0.0.1"
   port: 5008                 # Cập nhật số port thực tế của Switch 1
   device_type: "cisco_ios_telnet"
   username: "admin"
   password: "123456"
 
-Switch 2:
+Switch2:
   hostname: "127.0.0.1"
   port: 5009                 # Cập nhật số port thực tế của Switch 2
   device_type: "cisco_ios_telnet"
   username: "admin"
   password: "123456"
 
-Switch 3:
+Switch3:
   hostname: "127.0.0.1"
   port: 5010                 # Cập nhật số port thực tế của Switch 3
   device_type: "cisco_ios_telnet"
   username: "admin"
   password: "123456"  
 
-Switch 4:
+Switch4:
   hostname: "127.0.0.1"
   port: 5011                 # Cập nhật số port thực tế của Switch 4
   device_type: "cisco_ios_telnet"

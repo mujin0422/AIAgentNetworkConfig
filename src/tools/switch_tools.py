@@ -147,7 +147,7 @@ def config_switch_trunk(hostname: str, interface: str, allowed_vlans: str = "all
         return {"success": False, "error": str(e)}
             
 @tool
-def get_vlan_brief(hostname: str) -> Dict[str, Any]:
+def get_vlan_switch_brief(hostname: str) -> Dict[str, Any]:
     """XEM THÔNG TIN CÁC VLAN ĐANG CÓ TRÊN THIẾT BỊ."""
     try:
         conn_res = connect_to_device(hostname)
@@ -155,6 +155,21 @@ def get_vlan_brief(hostname: str) -> Dict[str, Any]:
 
         connection = conn_res["connection"]
         output = connection.send_command_timing("show vlan-switch brief")
+        connection.disconnect()
+        
+        return {"success": True, "device": hostname, "output": output}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+@tool
+def get_trunk_interfaces(hostname: str) -> Dict[str, Any]:
+    """XEM THÔNG TIN CÁC CỔNG TRUNK ĐANG CÓ TRÊN THIẾT BỊ."""
+    try:
+        conn_res = connect_to_device(hostname)
+        if not conn_res["success"]: return conn_res
+
+        connection = conn_res["connection"]
+        output = connection.send_command_timing("show interface trunk")
         connection.disconnect()
         
         return {"success": True, "device": hostname, "output": output}

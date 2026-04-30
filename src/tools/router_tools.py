@@ -254,7 +254,6 @@ def config_router_sub_interface(hostname: str, main_interface: str, sub_int_numb
             f"interface {main_interface}.{sub_int_number}",
             f"encapsulation dot1Q {vlan_id}",
             f"ip address {ip_address} {subnet_mask}",
-            "no shutdown",
             f"interface {main_interface}", # Đảm bảo cổng vật lý cũng được bật
             "no shutdown"
         ]

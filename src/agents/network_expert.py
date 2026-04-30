@@ -5,7 +5,7 @@ from src.tools.gns3_tools import(
     check_nodes_status,
     start_node
 )
-from tools.router_tools import (
+from src.tools.router_tools import (
     execute_show_command,
     ping_test,
     get_routing_table,
@@ -16,12 +16,13 @@ from tools.router_tools import (
     config_router_sub_interface
 )
 
-from tools.switch_tools import (
+from src.tools.switch_tools import (
     config_vlan,
     assign_vlan_access_port,
     assign_vlan_access_range,
     config_switch_trunk,
-    get_vlan_brief
+    get_vlan_switch_brief,
+    get_trunk_interfaces
 )
 
 def create_network_expert():
@@ -41,22 +42,23 @@ def create_network_expert():
         assign_vlan_access_port,
         assign_vlan_access_range,
         config_switch_trunk,
-        get_vlan_brief
+        get_vlan_switch_brief,
+        get_trunk_interfaces
     ]
     
     system_prompt = """
-    Bạn là Network Expert, chuyên gia vận hành mạng Cisco trong môi trường giả lập GNS3.
+    Bạn là Network Expert, chuyên gia vận hành và cấu hình mạng Cisco trong môi trường GNS3.
 
     NHIỆM VỤ CỦA BẠN:
-    1. Nhận diện cấu trúc mạng: Luôn bắt đầu bằng việc xác định sơ đồ kết nối vật lý.
-    2. Kiểm tra trạng thái vận hành: Đảm bảo thiết bị đã được bật nguồn trước khi thực hiện các lệnh cấu hình.
-    3. Thực thi chính xác: Chạy các lệnh show hoặc cấu hình sửa lỗi theo yêu cầu một cách an toàn.
+    1. Trinh sát hạ tầng: Bắt đầu bằng 'get_topology_links' và 'check_nodes_status' để nắm rõ sơ đồ và trạng thái nguồn của thiết bị.
+    2. Kiểm tra trạng thái: Sử dụng các lệnh show, ping để lấy thông tin IP, định tuyến, VLAN thực tế.
+    3. Triển khai cấu hình (MỚI): Thực thi các lệnh tạo VLAN, Sub-interface, Trunking, OSPF, Static Route khi được người dùng hoặc Analyst yêu cầu.
 
     NGUYÊN TẮC HOẠT ĐỘNG:
-    - Luôn ưu tiên dùng 'get_topology_links' ngay từ đầu để có cái nhìn tổng quan.
-    - Không tự ý giả định IP hoặc cổng nếu chưa quét topology.
-    - Cung cấp toàn bộ output của lệnh cho Analyst. Không tự ý kết luận nguyên nhân gốc rễ, hãy để việc đó cho Analyst.
-    - Trình bày thông tin thu thập được một cách sạch sẽ, phân tách rõ ràng theo từng thiết bị.
+    - Không tự ý giả định IP hoặc cổng. Luôn dựa vào topology hoặc lệnh show.
+    - [QUAN TRỌNG] Các công cụ cấu hình (config_*) đã được tích hợp sẵn cơ chế hỏi ý kiến người dùng (Human-in-the-Loop). Hãy tự tin gọi Tool cấu hình ngay khi xác định được tham số cần thiết, không cần hỏi rào đón bằng text.
+    - Cung cấp toàn bộ output thô của lệnh cho Analyst. Không tự kết luận nguyên nhân gốc rễ, hãy để Analyst làm việc đó.
+    - Trình bày log sạch sẽ, phân tách rõ ràng theo từng thiết bị.
     """
     
     llm = ChatOllama(
