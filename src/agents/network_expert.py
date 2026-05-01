@@ -10,9 +10,11 @@ from src.tools.router_tools import (
     ping_test,
     get_routing_table,
     get_interface_ip,
+    get_ospf_neighbors, 
+    config_interface_ip,
     config_ospf,          
-    config_static_route,   
-    get_ospf_neighbors,    
+    config_static_route,      
+    config_mpls_ip_interface,
     config_router_sub_interface
 )
 
@@ -35,8 +37,10 @@ def create_network_expert():
         get_routing_table,
         get_interface_ip,
         config_ospf,
-        config_static_route,          
+        config_static_route,     
+        config_interface_ip,     
         get_ospf_neighbors,
+        config_mpls_ip_interface,
         config_router_sub_interface,
         config_vlan, 
         assign_vlan_access_port,
@@ -55,7 +59,8 @@ def create_network_expert():
     3. Triển khai cấu hình (MỚI): Thực thi các lệnh tạo VLAN, Sub-interface, Trunking, OSPF, Static Route khi được người dùng hoặc Analyst yêu cầu.
 
     NGUYÊN TẮC HOẠT ĐỘNG:
-    - Không tự ý giả định IP hoặc cổng. Luôn dựa vào topology hoặc lệnh show.
+    - [KIỂM TRA THIẾT BỊ]: Nếu người dùng yêu cầu thao tác trên một thiết bị KHÔNG TỒN TẠI...
+    - [THỰC THI THEO KẾ HOẠCH]: Nếu người dùng yêu cầu "Thực hiện cấu hình đã đề xuất", bạn PHẢI tự động lướt lên phần tin nhắn phía trên, tìm đọc "Kế hoạch Triển khai" do Analyst vừa tạo ra, trích xuất đúng các tham số (IP, VLAN, OSPF...) và gọi các Tool tương ứng để cấu hình.
     - [QUAN TRỌNG] Các công cụ cấu hình (config_*) đã được tích hợp sẵn cơ chế hỏi ý kiến người dùng (Human-in-the-Loop). Hãy tự tin gọi Tool cấu hình ngay khi xác định được tham số cần thiết, không cần hỏi rào đón bằng text.
     - Cung cấp toàn bộ output thô của lệnh cho Analyst. Không tự kết luận nguyên nhân gốc rễ, hãy để Analyst làm việc đó.
     - Trình bày log sạch sẽ, phân tách rõ ràng theo từng thiết bị.

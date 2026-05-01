@@ -79,6 +79,22 @@ def execute_show_command(command: str, hostname: str) -> Dict[str, Any]:
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+@tool
+def get_ospf_neighbors(hostname: str) -> Dict[str, Any]:
+    """KIỂM TRA DANH SÁCH LÁNG GIỀNG OSPF."""
+    try:
+        conn_res = connect_to_device(hostname)
+        if not conn_res["success"]: return conn_res
+
+        connection = conn_res["connection"]
+        output = connection.send_command_timing("show ip ospf neighbor")
+        connection.disconnect()
+        
+        return {"success": True, "device": hostname, "output": output}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+
 # @tool
 # def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str, area: str) -> Dict[str, Any]:
 #     """
@@ -164,6 +180,49 @@ def execute_show_command(command: str, hostname: str) -> Dict[str, Any]:
 #         return {"success": False, "error": str(e)}
 
 @tool
+def config_interface_ip(hostname: str, interface: str, ip_address: str, subnet_mask: str) -> Dict[str, Any]:
+    """
+    CẤU HÌNH ĐỊA CHỈ IP CHO MỘT CỔNG (INTERFACE) CỦA ROUTER HOẶC SWITCH LAYER 3.
+    Args:
+        hostname: Tên thiết bị cần cấu hình (VD: "R1", "PE1").
+        interface: Tên cổng cần cấu hình IP (VD: "FastEthernet0/0", "GigabitEthernet1/0").
+        ip_address: Địa chỉ IP cần đặt (VD: "192.168.1.1").
+        subnet_mask: Subnet mask tương ứng (VD: "255.255.255.0").
+    """
+    try:
+        # 1. Chốt chặn bảo mật (HITL)
+        action_msg = f"Cấu hình IP {ip_address} {subnet_mask} cho cổng {interface} trên thiết bị {hostname} và bật cổng (no shutdown)."
+        user_approval = interrupt(action_msg)
+        
+        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+            return {"success": False, "error": "Đã hủy bởi người dùng."}
+
+        # 2. Thực thi kết nối và cấu hình
+        conn_res = connect_to_device(hostname)
+        if not conn_res["success"]: return conn_res
+
+        connection = conn_res["connection"]
+        
+        # Các lệnh truy cập vào interface, đặt IP và bật cổng lên
+        config_commands = [
+            f"interface {interface}",
+            f"ip address {ip_address} {subnet_mask}",
+            "no shutdown"
+        ]
+            
+        output = connection.send_config_set(config_commands)
+        connection.disconnect()
+        
+        return {
+            "success": True, 
+            "device": hostname, 
+            "action": "config_interface_ip", 
+            "output": output
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    
+@tool
 def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str, area: str) -> Dict[str, Any]:
     """CẤU HÌNH ĐỊNH TUYẾN OSPF TRÊN THIẾT BỊ."""
     try:
@@ -207,22 +266,47 @@ def config_static_route(hostname: str, destination: str, subnet_mask: str, next_
         return {"success": True, "device": hostname, "action": "config_static_route", "output": output}
     except Exception as e:
         return {"success": False, "error": str(e)}
-
+   
 @tool
-def get_ospf_neighbors(hostname: str) -> Dict[str, Any]:
-    """KIỂM TRA DANH SÁCH LÁNG GIỀNG OSPF."""
+def config_mpls_ip_interface(hostname: str, interface: str) -> Dict[str, Any]:
+    """
+    KÍCH HOẠT CHỨC NĂNG MPLS TRÊN MỘT CỔNG (INTERFACE) CỦA ROUTER.
+    Args:
+        hostname: Tên Router cần cấu hình (VD: "PE1", "P1").
+        interface: Tên cổng cần bật MPLS (VD: "FastEthernet0/0").
+    """
     try:
+        # 1. Chốt chặn bảo mật (HITL)
+        action_msg = f"Kích hoạt giao thức MPLS (lệnh 'mpls ip') trên cổng {interface} của thiết bị {hostname}."
+        user_approval = interrupt(action_msg)
+        
+        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+            return {"success": False, "error": "Đã hủy bởi người dùng."}
+
+        # 2. Thực thi kết nối và cấu hình
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
-        output = connection.send_command_timing("show ip ospf neighbor")
+        
+        # Các lệnh truy cập vào interface và bật mpls
+        config_commands = [
+            f"interface {interface}",
+            "mpls ip"
+        ]
+            
+        output = connection.send_config_set(config_commands)
         connection.disconnect()
         
-        return {"success": True, "device": hostname, "output": output}
+        return {
+            "success": True, 
+            "device": hostname, 
+            "action": "config_mpls_ip_interface", 
+            "output": output
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
-    
+        
 @tool
 def config_router_sub_interface(hostname: str, main_interface: str, sub_int_number: str, vlan_id: str, ip_address: str, subnet_mask: str) -> Dict[str, Any]:
     """
