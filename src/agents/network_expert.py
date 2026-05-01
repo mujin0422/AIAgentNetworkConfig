@@ -3,11 +3,19 @@ from langgraph.prebuilt import create_react_agent
 from src.tools.gns3_tools import(
     get_topology_links,
     check_nodes_status,
-    start_node
+    start_node,
+    stop_node,
+    restart_node
 )
-from src.tools.router_tools import (
+
+from src.tools.common_tools import (
+    save_device_config,
+    get_running_config,
     execute_show_command,
-    ping_test,
+    ping_test
+)
+
+from src.tools.router_tools import (
     get_routing_table,
     get_interface_ip,
     get_ospf_neighbors, 
@@ -32,6 +40,10 @@ def create_network_expert():
         get_topology_links,
         check_nodes_status,
         start_node,
+        stop_node,
+        restart_node,
+        save_device_config,
+        get_running_config,
         execute_show_command,
         ping_test,
         get_routing_table,
