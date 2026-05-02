@@ -53,116 +53,20 @@ def get_ospf_neighbors(hostname: str) -> Dict[str, Any]:
     except Exception as e:
         return {"success": False, "error": str(e)}
     
-
-# @tool
-# def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str, area: str) -> Dict[str, Any]:
-#     """
-#     CẤU HÌNH ĐỊNH TUYẾN OSPF TRÊN THIẾT BỊ.
-#     Args:
-#         hostname: Tên thiết bị cần cấu hình (VD: "P1").
-#         process_id: ID của tiến trình OSPF (VD: "1").
-#         network: Địa chỉ mạng cần quảng bá (VD: "10.0.0.0").
-#         wildcard_mask: Wildcard mask của mạng (VD: "0.0.0.255").
-#         area: Khu vực OSPF (VD: "0").
-#     """
-#     try:
-#         conn_res = connect_to_device(hostname)
-#         if not conn_res["success"]: return conn_res
-
-#         connection = conn_res["connection"]
-        
-#         # Tập hợp các lệnh cấu hình
-#         config_commands = [
-#             f"router ospf {process_id}",
-#             f"network {network} {wildcard_mask} area {area}"
-#         ]
-        
-#         # send_config_set tự động vào/ra mode 'configure terminal'
-#         output = connection.send_config_set(config_commands)
-#         connection.disconnect()
-        
-#         return {"success": True, "device": hostname, "action": "config_ospf", "output": output}
-#     except Exception as e:
-#         return {"success": False, "error": str(e)}
-
-# @tool
-# def config_static_route(hostname: str, destination: str, subnet_mask: str, next_hop: str) -> Dict[str, Any]:
-#     """
-#     CẤU HÌNH ĐỊNH TUYẾN TĨNH (STATIC ROUTE) TRÊN THIẾT BỊ.
-#     Args:
-#         hostname: Tên thiết bị cần cấu hình (VD: "P1").
-#         destination: Mạng đích cần đến (VD: "192.168.2.0" hoặc "0.0.0.0" cho default route).
-#         subnet_mask: Subnet mask của mạng đích (VD: "255.255.255.0" hoặc "0.0.0.0").
-#         next_hop: Địa chỉ IP trạm kế tiếp hoặc cổng ra (VD: "10.0.0.2" hoặc "FastEthernet0/0").
-#     """
-#     try:
-#         conn_res = connect_to_device(hostname)
-#         if not conn_res["success"]: return conn_res
-
-#         connection = conn_res["connection"]
-        
-#         config_commands = [
-#             f"ip route {destination} {subnet_mask} {next_hop}"
-#         ]
-        
-#         output = connection.send_config_set(config_commands)
-#         connection.disconnect()
-        
-#         return {"success": True, "device": hostname, "action": "config_static_route", "output": output}
-#     except Exception as e:
-#         return {"success": False, "error": str(e)}
-
-# @tool
-# def config_vlan(hostname: str, vlan_id: str, vlan_name: str = "") -> Dict[str, Any]:
-#     """
-#     TẠO VÀ CẤU HÌNH VLAN TRÊN SWITCH/ROUTER.
-#     Args:
-#         hostname: Tên thiết bị (VD: "Switch1").
-#         vlan_id: Số ID của VLAN (VD: "10").
-#         vlan_name: Tên của VLAN (Optional, VD: "HR_DEPT").
-#     """
-#     try:
-#         conn_res = connect_to_device(hostname)
-#         if not conn_res["success"]: return conn_res
-
-#         connection = conn_res["connection"]
-        
-#         config_commands = [f"vlan {vlan_id}"]
-#         if vlan_name:
-#             config_commands.append(f"name {vlan_name}")
-            
-#         output = connection.send_config_set(config_commands)
-#         connection.disconnect()
-        
-#         return {"success": True, "device": hostname, "action": "config_vlan", "output": output}
-#     except Exception as e:
-#         return {"success": False, "error": str(e)}
-
 @tool
 def config_interface_ip(hostname: str, interface: str, ip_address: str, subnet_mask: str) -> Dict[str, Any]:
-    """
-    CẤU HÌNH ĐỊA CHỈ IP CHO MỘT CỔNG (INTERFACE) CỦA ROUTER HOẶC SWITCH LAYER 3.
-    Args:
-        hostname: Tên thiết bị cần cấu hình (VD: "R1", "PE1").
-        interface: Tên cổng cần cấu hình IP (VD: "FastEthernet0/0", "GigabitEthernet1/0").
-        ip_address: Địa chỉ IP cần đặt (VD: "192.168.1.1").
-        subnet_mask: Subnet mask tương ứng (VD: "255.255.255.0").
-    """
-    try:
-        # 1. Chốt chặn bảo mật (HITL)
-        action_msg = f"Cấu hình IP {ip_address} {subnet_mask} cho cổng {interface} trên thiết bị {hostname} và bật cổng (no shutdown)."
-        user_approval = interrupt(action_msg)
-        
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return {"success": False, "error": "Đã hủy bởi người dùng."}
+    """CẤU HÌNH ĐỊA CHỈ IP CHO MỘT CỔNG (INTERFACE) CỦA ROUTER."""
+    action_msg = f"Cấu hình IP {ip_address} {subnet_mask} cho cổng {interface} trên thiết bị {hostname} và bật cổng (no shutdown)."
+    user_approval = interrupt(action_msg)
 
-        # 2. Thực thi kết nối và cấu hình
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return {"success": False, "error": "Đã hủy bởi người dùng."}
+    
+    try:
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
-        
-        # Các lệnh truy cập vào interface, đặt IP và bật cổng lên
         config_commands = [
             f"interface {interface}",
             f"ip address {ip_address} {subnet_mask}",
@@ -183,14 +87,14 @@ def config_interface_ip(hostname: str, interface: str, ip_address: str, subnet_m
     
 @tool
 def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str, area: str) -> Dict[str, Any]:
-    """CẤU HÌNH ĐỊNH TUYẾN OSPF TRÊN THIẾT BỊ."""
-    try:
-        action_msg = f"Cấu hình OSPF (Process: {process_id}, Network: {network} {wildcard_mask}, Area: {area}) trên {hostname}."
-        user_approval = interrupt(action_msg) 
+    """CẤU HÌNH ĐỊNH TUYẾN OSPF TRÊN THIẾT BỊ."""        
+    action_msg = f"Cấu hình OSPF (Process: {process_id}, Network: {network} {wildcard_mask}, Area: {area}) trên {hostname}."
+    user_approval = interrupt(action_msg) 
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return {"success": False, "error": "Đã hủy bởi người dùng."}
-
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return {"success": False, "error": "Đã hủy bởi người dùng."}
+    
+    try:
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
@@ -208,13 +112,13 @@ def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str
 @tool
 def config_static_route(hostname: str, destination: str, subnet_mask: str, next_hop: str) -> Dict[str, Any]:
     """CẤU HÌNH ĐỊNH TUYẾN TĨNH (STATIC ROUTE) TRÊN THIẾT BỊ."""
-    try:
-        action_msg = f"Tạo Static Route đến {destination}/{subnet_mask} qua Next-hop {next_hop} trên {hostname}."
-        user_approval = interrupt(action_msg)
+    action_msg = f"Tạo Static Route đến {destination}/{subnet_mask} qua Next-hop {next_hop} trên {hostname}."
+    user_approval = interrupt(action_msg)
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return {"success": False, "error": "Đã hủy bởi người dùng."}
-
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return {"success": False, "error": "Đã hủy bởi người dùng."}
+    
+    try:
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
@@ -228,27 +132,18 @@ def config_static_route(hostname: str, destination: str, subnet_mask: str, next_
    
 @tool
 def config_mpls_ip_interface(hostname: str, interface: str) -> Dict[str, Any]:
-    """
-    KÍCH HOẠT CHỨC NĂNG MPLS TRÊN MỘT CỔNG (INTERFACE) CỦA ROUTER.
-    Args:
-        hostname: Tên Router cần cấu hình (VD: "PE1", "P1").
-        interface: Tên cổng cần bật MPLS (VD: "FastEthernet0/0").
-    """
-    try:
-        # 1. Chốt chặn bảo mật (HITL)
-        action_msg = f"Kích hoạt giao thức MPLS (lệnh 'mpls ip') trên cổng {interface} của thiết bị {hostname}."
-        user_approval = interrupt(action_msg)
+    """KÍCH HOẠT CHỨC NĂNG MPLS TRÊN MỘT CỔNG (INTERFACE) CỦA ROUTER."""        
+    action_msg = f"Kích hoạt giao thức MPLS (lệnh 'mpls ip') trên cổng {interface} của thiết bị {hostname}."
+    user_approval = interrupt(action_msg)
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return {"success": False, "error": "Đã hủy bởi người dùng."}
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return {"success": False, "error": "Đã hủy bởi người dùng."}
 
-        # 2. Thực thi kết nối và cấu hình
+    try:
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
-        
-        # Các lệnh truy cập vào interface và bật mpls
         config_commands = [
             f"interface {interface}",
             "mpls ip"
@@ -268,36 +163,24 @@ def config_mpls_ip_interface(hostname: str, interface: str) -> Dict[str, Any]:
         
 @tool
 def config_router_sub_interface(hostname: str, main_interface: str, sub_int_number: str, vlan_id: str, ip_address: str, subnet_mask: str) -> Dict[str, Any]:
-    """
-    CẤU HÌNH SUB-INTERFACE TRÊN ROUTER ĐỂ HỖ TRỢ INTER-VLAN ROUTING (ROUTER-ON-A-STICK).
-    Args:
-        hostname: Tên Router cần cấu hình (VD: "P1").
-        main_interface: Tên cổng vật lý gốc (VD: "FastEthernet0/0").
-        sub_int_number: Số hiệu sub-interface (VD: "10").
-        vlan_id: ID của VLAN cần định tuyến (VD: "10").
-        ip_address: IP Gateway cho VLAN đó (VD: "192.168.10.1").
-        subnet_mask: Subnet mask tương ứng (VD: "255.255.255.0").
-    """
-    try:
-        # 1. Chốt chặn bảo mật (HITL)
-        action_msg = f"Cấu hình Sub-interface {main_interface}.{sub_int_number} cho VLAN {vlan_id} với IP {ip_address} trên {hostname}."
-        user_approval = interrupt(action_msg)
+    """CẤU HÌNH SUB-INTERFACE TRÊN ROUTER ĐỂ HỖ TRỢ INTER-VLAN ROUTING (ROUTER-ON-A-STICK)."""
+    action_msg = f"Cấu hình Sub-interface {main_interface}.{sub_int_number} cho VLAN {vlan_id} với IP {ip_address} trên {hostname}."
+    user_approval = interrupt(action_msg)
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return {"success": False, "error": "Đã hủy bởi người dùng."}
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return {"success": False, "error": "Đã hủy bởi người dùng."}
 
-        # 2. Thực thi kết nối và cấu hình
+    try:
         conn_res = connect_to_device(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
         
-        # Tập hợp các lệnh cấu hình Sub-interface
         config_commands = [
             f"interface {main_interface}.{sub_int_number}",
             f"encapsulation dot1Q {vlan_id}",
             f"ip address {ip_address} {subnet_mask}",
-            f"interface {main_interface}", # Đảm bảo cổng vật lý cũng được bật
+            f"interface {main_interface}",
             "no shutdown"
         ]
             

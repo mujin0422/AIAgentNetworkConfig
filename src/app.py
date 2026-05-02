@@ -203,6 +203,18 @@ class NetworkAssistantApp(ctk.CTk):
 
         threading.Thread(target=self.processAi, args=(user_text, is_resume), daemon=True).start()
 
+    # Hàm hiển thị thông báo yêu cầu phê duyệt từ AI (HITL)
+    def askUserApproval(self, interrupt_msg):
+        self.hideLoading()
+        self.is_waiting_approval = True
+        
+        # Định dạng nội dung cảnh báo bằng Markdown
+        approval_text = f"**⚠️ YÊU CẦU PHÊ DUYỆT TỪ HỆ THỐNG:**\n\n{interrupt_msg}\n\n👉 *Vui lòng gõ **'yes'** (hoặc y, ok) vào ô chat để đồng ý thực thi, hoặc gõ **'no'** để hủy bỏ.*"
+        
+        # In thông báo ra màn hình chat
+        self.addMessage("ai", approval_text)
+        self.send_btn.configure(state="normal")
+
     # Hàm xử lý phản hồi từ AI, cập nhật log và hiển thị kết quả cuối cùng, phân biệt giữa dữ liệu thô và phân tích của Analyst
     def processAi(self, user_text, is_resume=False):
         config = {"configurable": {"thread_id": self.thread_id}}
@@ -283,7 +295,7 @@ class NetworkAssistantApp(ctk.CTk):
             if state.tasks and state.tasks[0].interrupts:
                 interrupt_msg = state.tasks[0].interrupts[0].value
                 # Gọi hàm UI hỏi ý kiến người dùng và DỪNG tiến trình xử lý tại đây
-                self.after(0, self._ask_user_approval, interrupt_msg)
+                self.after(0, self.askUserApproval, interrupt_msg)
                 return 
 
             # 4. Nếu không bị đóng băng -> Hoàn tất báo cáo và in ra GUI

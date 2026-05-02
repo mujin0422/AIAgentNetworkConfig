@@ -1,6 +1,7 @@
 import requests
 from langchain_core.tools import tool
 from langgraph.types import interrupt
+from langgraph.errors import GraphInterrupt
 
 GNS3_IP = "127.0.0.1"
 GNS3_PORT = "3080"
@@ -53,10 +54,7 @@ def check_nodes_status() -> str:
     
 @tool
 def start_node(node_name: str) -> str:
-    """
-    Sử dụng công cụ này để bật nguồn (start) một thiết bị trong GNS3 khi nó đang ở trạng thái 'stopped'.
-    Tham số: node_name (tên của thiết bị, ví dụ: 'R3').
-    """
+    """Sử dụng công cụ này để bật nguồn (start) một thiết bị trong GNS3 khi nó đang ở trạng thái 'stopped'."""
     url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
     try:
         nodes_resp = requests.get(url_nodes)
@@ -66,7 +64,6 @@ def start_node(node_name: str) -> str:
         if not node_id:
             return f"Không tìm thấy thiết bị có tên {node_name} để bật."
 
-        # Gửi lệnh start
         url_start = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/start"
         response = requests.post(url_start)
         if response.status_code in [200, 201, 204]:
@@ -78,18 +75,14 @@ def start_node(node_name: str) -> str:
     
 @tool
 def stop_node(node_name: str) -> str:
-    """
-    TẮT NGUỒN (STOP) MỘT THIẾT BỊ TRONG GNS3.
-    Chỉ sử dụng khi cần mô phỏng lỗi phần cứng hoặc theo yêu cầu cụ thể.
-    """
-    try:
-        action_msg = f"CẢNH BÁO: Tắt nguồn (Stop) thiết bị {node_name} trên GNS3."
-        user_approval = interrupt(action_msg)
+    """TẮT NGUỒN (STOP) MỘT THIẾT BỊ TRONG GNS3. Chỉ sử dụng khi cần mô phỏng lỗi phần cứng hoặc theo yêu cầu cụ thể."""
+    action_msg = f"CẢNH BÁO: Tắt nguồn (Stop) thiết bị {node_name} trên GNS3."
+    user_approval = interrupt(action_msg)
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return "Đã hủy thao tác tắt nguồn bởi người dùng."
-
-        # Lấy ID của node từ tên node
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return "Đã hủy thao tác tắt nguồn bởi người dùng."
+    
+    try:
         url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
         nodes_resp = requests.get(url_nodes)
         nodes = nodes_resp.json()
@@ -98,7 +91,6 @@ def stop_node(node_name: str) -> str:
         if not node_id:
             return f"Không tìm thấy thiết bị có tên {node_name} để tắt."
 
-        # Gửi lệnh stop
         url_stop = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/stop"
         response = requests.post(url_stop)
         if response.status_code in [200, 201, 204]:
@@ -106,20 +98,20 @@ def stop_node(node_name: str) -> str:
         else:
             return f"Không thể tắt thiết bị {node_name}. Lỗi: {response.text}"
     except Exception as e:
-        return f"Lỗi hệ thống khi cố gắng tắt thiết bị: {str(e)}"
+        return f"Lỗi hệ thống khi cố gắng restart thiết bị: {str(e)}"
 
 @tool
 def restart_node(node_name: str) -> str:
     """
     KHỞI ĐỘNG LẠI (RESTART/RELOAD) MỘT THIẾT BỊ TRONG GNS3.
     """
-    try:
-        action_msg = f"CẢNH BÁO: Khởi động lại (Restart) thiết bị {node_name} trên GNS3."
-        user_approval = interrupt(action_msg)
+    action_msg = f"CẢNH BÁO: Khởi động lại (Restart) thiết bị {node_name} trên GNS3."
+    user_approval = interrupt(action_msg)
         
-        if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
-            return "Đã hủy thao tác khởi động lại bởi người dùng."
-
+    if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
+        return "Đã hủy thao tác khởi động lại bởi người dùng."
+    
+    try:
         url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
         nodes_resp = requests.get(url_nodes)
         nodes = nodes_resp.json()

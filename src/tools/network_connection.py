@@ -5,7 +5,6 @@ import yaml
 from src.tools.parser_tools import *
 
 def get_ssh_params():
-    """Lấy tham số SSH từ môi trường"""
     return {
         'conn_timeout': int(os.getenv('SSH_TIMEOUT', 60)),
         'auth_timeout': int(os.getenv('SSH_AUTH_TIMEOUT', 30)),
@@ -13,9 +12,6 @@ def get_ssh_params():
     }
 
 def get_device_config(device_identifier: str):
-    """
-    Đọc config thiết bị từ file yaml dựa vào tên (VD: 'P1') hoặc IP (VD: '10.0.0.1').
-    """
     try:
         with open("config/devices.yaml", 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
@@ -39,7 +35,6 @@ def connect_to_device(target: str) -> Dict[str, Any]:
     if not device_cfg:
         return {"success": False, "error": f"Không tìm thấy cấu hình cho '{target}'"}
     
-    # Đã sửa lỗi ghi đè biến ở đây
     target_host = str(device_cfg.get("hostname", ""))
     username = str(device_cfg.get("username", ""))
     password = str(device_cfg.get("password", ""))

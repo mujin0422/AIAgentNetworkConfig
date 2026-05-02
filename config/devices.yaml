@@ -81,3 +81,13 @@ Switch4:
   device_type: "cisco_ios_telnet"
   username: "admin"
   password: "123456"  
+
+
+
+
+P3:
+  hostname: "127.0.0.1"      
+  port: 5024                 # Cập nhật số port thực tế của P1
+  device_type: "cisco_ios_telnet"
+  username: "admin"
+  password: "123456"
