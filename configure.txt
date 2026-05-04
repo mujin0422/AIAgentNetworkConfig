@@ -3,7 +3,6 @@
 hostname P1
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -47,7 +46,6 @@ wr
 hostname P2
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -85,12 +83,12 @@ exit
 end
 wr
 
+
 //========== PE1 ==========//
 
 hostname PE1
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -119,15 +117,53 @@ router ospf 1
 network 10.0.0.0 0.255.255.255 area 0
 exit
 
+ip vrf CUS_A
+rd 1:1
+route-target both 1:1
+exit
+
+ip vrf CUS_B
+rd 1:2
+route-target both 1:2
+exit
+
+int f3/0
+ip vrf forwarding CUS_A
+ip add 192.168.1.1 255.255.255.0
+no shut
+exit
+
+int f4/0
+ip vrf forwarding CUS_B
+ip add 192.168.2.1 255.255.255.0
+no shut
+exit
+
+router bgp 2204
+neighbor 10.2.2.2 remote-as 2204
+neighbor 10.2.2.2 update-source loopback0
+address-family vpnv4
+neighbor 10.2.2.2 activate
+neighbor 10.2.2.2 send-community extended
+exit
+address-family ipv4 vrf CUS_A
+neighbor 192.168.1.2 remote-as 22041
+neighbor 192.168.1.2 activate
+exit
+address-family ipv4 vrf CUS_B
+neighbor 192.168.2.2 remote-as 22042
+neighbor 192.168.2.2 activate
+exit
+
 end
 wr
+
 
 //========== PE2 ==========//
 
 hostname PE2
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -156,61 +192,356 @@ router ospf 1
 network 10.0.0.0 0.255.255.255 area 0
 exit
 
+ip vrf CUS_A
+rd 1:1
+route-target both 1:1
+exit
+
+ip vrf CUS_B
+rd 1:2
+route-target both 1:2
+exit
+
+int f3/0
+ip vrf forwarding CUS_A
+ip add 192.168.3.1 255.255.255.0
+no shut
+exit
+
+int f4/0
+ip vrf forwarding CUS_B
+ip add 192.168.4.1 255.255.255.0
+no shut
+exit
+
+router bgp 2204
+neighbor 10.1.1.1 remote-as 2204
+neighbor 10.1.1.1 update-source loopback0
+address-family vpnv4
+neighbor 10.1.1.1 activate
+neighbor 10.1.1.1 send-community extended
+exit
+address-family ipv4 vrf CUS_A
+neighbor 192.168.3.2 remote-as 22043
+neighbor 192.168.3.2 activate
+exit
+address-family ipv4 vrf CUS_B
+neighbor 192.168.4.2 remote-as 22044
+neighbor 192.168.4.2 activate
+exit
+
 end
 wr
 
-//========== R1 ==========//
 
-hostname R1
+//========== CE-1A ==========//
+
+hostname CE-1A
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
 transport input ssh
-login local 
+login local
 exit
 ip ssh version 2
 
-//========== R2 ==========//
+int f0/0
+ip add 192.168.1.2 255.255.255.0
+no shut
+exit
 
-hostname R2
+int f1/0
+no ip add
+no shut
+exit
+
+interface f1/0.10
+encapsulation dot1Q 10
+ip address 172.16.1.1 255.255.255.128
+ex
+
+interface f1/0.20
+encapsulation dot1Q 20
+ip address 172.16.1.129 255.255.255.128
+ex
+
+router bgp 22041
+neighbor 192.168.1.1 remote-as 2204
+network 172.16.1.0 mask 255.255.255.0
+network 172.16.1.0 mask 255.255.255.128
+network 172.16.1.128 mask 255.255.255.128
+exit
+
+end
+wr
+
+
+//========== CE-1B ==========//
+
+hostname CE-1B
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
 transport input ssh
-login local 
+login local
 exit
 ip ssh version 2
 
-//========== R3 ==========//
+int f0/0
+ip add 192.168.2.2 255.255.255.0
+no shut
+exit
 
-hostname R3
+int f1/0
+ip add 172.16.2.1 255.255.255.0
+no shut
+exit
+
+router bgp 22042
+neighbor 192.168.2.1 remote-as 2204
+network 172.16.2.0 mask 255.255.255.0
+exit
+
+end
+wr
+
+
+//========== CE-2A ==========//
+
+hostname CE-2A
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
 transport input ssh
-login local 
+login local
 exit
 ip ssh version 2
 
-//========== R4 ==========//
+int f0/0
+ip add 192.168.3.2 255.255.255.0
+no shut
+exit
 
-hostname R4
+int f1/0
+no ip add
+no shut
+exit
+
+interface f1/0.10
+encapsulation dot1Q 10
+ip address 172.16.3.1 255.255.255.128
+ex
+
+interface f1/0.20
+encapsulation dot1Q 20
+ip address 172.16.3.129 255.255.255.128
+ex
+
+router bgp 22043
+neighbor 192.168.3.1 remote-as 2204
+network 172.16.3.0 mask 255.255.255.0
+network 172.16.3.0 mask 255.255.255.128
+network 172.16.3.128 mask 255.255.255.128
+exit
+
+end
+wr
+
+
+//========== CE-2B ==========//
+
+hostname CE-2B
 ip domain-name aiagent.local
 crypto key generate rsa
-yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
 transport input ssh
-login local 
+login local
 exit
 ip ssh version 2
+
+int f0/0
+ip add 192.168.4.2 255.255.255.0
+no shut
+exit
+
+int f1/0
+ip add 172.16.4.1 255.255.255.0
+no shut
+exit
+
+router bgp 22044
+neighbor 192.168.4.1 remote-as 2204
+network 172.16.4.0 mask 255.255.255.0
+exit
+
+end
+wr
+
+
+//========== Switch1 ==========//
+
+hostname Switch1
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+vlan 10
+name KETOAN
+ex
+
+vlan 20
+name KYTHUAT
+exit
+
+interface f1/0
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+ex
+
+interface range f1/8 - 11
+switchport mode access
+switchport access vlan 10
+no shut
+ex 
+
+interface range f1/12 - 15
+switchport mode access
+switchport access vlan 20
+no shut
+ex
+
+end
+wr
+
+//========== Switch2 ==========//
+
+hostname Switch2
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+end
+wr
+
+//========== Switch3 ==========//
+
+hostname Switch3
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+vlan 10
+name KETOAN
+ex
+
+vlan 20
+name KYTHUAT
+exit
+
+interface f1/0
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+ex
+
+interface range f1/8 - 11
+switchport mode access
+switchport access vlan 10
+no shut
+ex 
+
+interface range f1/12 - 15
+switchport mode access
+switchport access vlan 20
+no shut
+ex
+
+end
+wr
+
+//========== Switch4 ==========//
+
+hostname Switch4
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local
+exit
+ip ssh version 2
+
+no ip routing
+
+end
+wr
+
+//========== PC1 ==========//
+
+ip 172.16.1.10 255.255.255.0 172.16.1.1
+
+save
+
+//========== PC2 ==========//
+
+ip 172.16.1.130 255.255.255.128 172.16.1.129
+
+save
+
+//========== PC3 ==========//
+
+ip 172.16.2.10 255.255.255.0 172.16.2.1
+
+save
+
+//========== PC4 ==========//
+
+ip 172.16.3.10 255.255.255.0 172.16.3.1
+
+save
+
+//========== PC5 ==========//
+
+ip 172.16.3.130 255.255.255.128 172.16.3.129
+
+save
+
+//========== PC6 ==========//
+
+ip 172.16.4.10 255.255.255.0 172.16.4.1
+
+save

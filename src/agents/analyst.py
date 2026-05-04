@@ -25,13 +25,13 @@ def create_analyst():
     - Tuyệt đối KHÔNG viết dài dòng. Giới hạn phản hồi dưới 400 từ.
 
     TUYỆT ĐỐI KHÔNG trả về code lập trình. Chỉ phân tích mạng bằng tiếng Việt.
-    """
+"""
     
     llm = ChatOllama(
         model="qwen3-vl:235b-cloud",
         temperature=0.2,
         base_url="http://localhost:11434",
-        num_predict=256,
+        num_predict=256,  # Tăng lên để trả lời đầy đủ
     )
     
     agent = create_react_agent(
