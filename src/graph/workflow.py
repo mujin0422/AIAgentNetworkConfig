@@ -55,7 +55,7 @@ def createNetworkAssistantGraph():
     builder.add_node("network_expert", network_expert)
     builder.add_node("extract_data", extractNetworkData)
     builder.add_node("analyst", analyst)
-    builder.add_node("afterAnalyst", afterAnalyst)
+    builder.add_node("after_analyst", afterAnalyst)
 
     # Thiết lập luồng chạy (Edges)
     builder.add_edge(START, "supervisor")
@@ -65,8 +65,8 @@ def createNetworkAssistantGraph():
     builder.add_edge("extract_data", "supervisor")
 
     # Luồng Phân tích: Analyst -> After Analyst (lưu report) -> Quay lại Supervisor để END
-    builder.add_edge("analyst", "afterAnalyst")
-    builder.add_edge("afterAnalyst", "supervisor")
+    builder.add_edge("analyst", "after_analyst")
+    builder.add_edge("after_analyst", "supervisor")
 
     # Biên dịch đồ thị với bộ nhớ checkpoint
     graph = builder.compile(checkpointer=MemorySaver())
