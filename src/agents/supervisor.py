@@ -1,74 +1,59 @@
-from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
+from typing import Literal
 from src.graph.state import NetworkState
-from src.agents.supervisor import SupervisorAgent
-from src.agents.network_expert import create_network_expert
-from src.agents.analyst import create_analyst
+from langgraph.types import Command
+from langgraph.graph import END
 
-def extractNetworkData(state: NetworkState):
-    """
-    Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs
-    giúp Supervisor nhận diện được dữ liệu đã được thu thập.
-    """
-    messages = state.get("messages", [])
-    new_outputs = {} # Khởi tạo lại từ đầu để xóa dữ liệu cũ của phiên trước
-    
-    for msg in reversed(messages):
-        if msg.type == "tool":
-            tool_name = getattr(msg, 'name', 'unknown_tool')
-            # Chỉ lấy kết quả mới nhất nếu 1 tool được gọi nhiều lần
-            if tool_name not in new_outputs:
-                new_outputs[tool_name] = msg.content
-        elif msg.type == "human":
-            break
-            
-    return {
-        "command_outputs": new_outputs,
-        "current_phase": "collected" if new_outputs else "start"
-    }
+class SupervisorAgent:
+    def route(self, state: NetworkState):
+        messages = state.get("messages", [])
+        last_message = messages[-1] if messages else None
+        
+        # 0. KIỂM TRA YÊU CẦU MỚI: Nếu tin nhắn cuối cùng là từ người dùng, bắt đầu thu thập dữ liệu mới
+        if last_message and last_message.type == "human":
+            print("\033[95m[SUPERVISOR] Nhận yêu cầu mới. Chuyển sang ➤ NETWORK EXPERT ...\033[0m")
+            return Command(
+                goto="network_expert",
+                update={
+                    "current_phase": "collecting",
+                    "command_outputs": {} 
+                }
+            )
+        
+        # 1. KIỂM TRA ĐIỂM DỪNG: Nếu Analyst đã trả lời xong
+        if state.get("current_phase") == "analyzed":
+            if last_message and last_message.type == "ai" and not getattr(last_message, 'tool_calls', None):
+                print("\033[95m[SUPERVISOR] Phân tích hoàn tất. Kết thúc workflow.\033[0m")
+                return Command(
+                    goto=END, 
+                    update={"current_phase": "finished"}
+                )
 
-def afterAnalyst(state: NetworkState):
-    """
-    Node xử lý sau khi Analyst phản hồi: 
-    Lưu nội dung phân tích vào final_report để main.py có thể hiển thị.
-    """
-    messages = state.get("messages", [])
-    last_content = messages[-1].content if messages else ""
-    
-    return {
-        "analysis_results": {"status": "completed"}, 
-        "current_phase": "analyzed",
-        "final_report": last_content # Chuyển câu trả lời của Agent thành báo cáo chính thức
-    }
+        # 2. XỬ LÝ NGOẠI LỆ: EXPERT HỎI LẠI VÌ THIẾU THÔNG TIN
+        # Nếu tin nhắn cuối là từ AI (Expert) và nó KHÔNG dùng tool (Tức là nó đang hỏi/từ chối)
+        if state.get("current_phase") in ["start", "collecting"]:
+            if last_message and last_message.type == "ai" and not getattr(last_message, 'tool_calls', None):
+                print("\033[95m[SUPERVISOR] Expert đang yêu cầu thêm thông tin. Chuyển sang ➤ ANALYST ...\033[0m")
+                return Command(
+                    goto="analyst", 
+                    update={"current_phase": "analyzing"}
+                )
 
-def createNetworkAssistantGraph():
-    # Khởi tạo các thành phần
-    supervisor = SupervisorAgent()
-    network_expert = create_network_expert()
-    analyst = create_analyst()
+        # 3. KIỂM TRA DỮ LIỆU BÌNH THƯỜNG
+        has_tool_output = any(msg.type == "tool" for msg in messages)
+        
+        if not has_tool_output and not state.get("command_outputs"):
+            print("\033[95m[SUPERVISOR] Đang thu thập dữ liệu thiết bị từ ➤  NETWORK EXPERT ...\033[0m")
+            return Command(
+                goto="network_expert",
+                update={"current_phase": "collecting"}
+            )
+        
+        # 4. CHUYỂN SANG PHÂN TÍCH
+        if state.get("current_phase") != "analyzed":
+            print("\033[95m[SUPERVISOR] Đã có dữ liệu. Thực hiện phân tích với ➤  ANALYST ...\033[0m")
+            return Command(
+                goto="analyst",
+                update={"current_phase": "analyzing"}
+            )
 
-    # Khởi tạo đồ thị với NetworkState
-    builder = StateGraph(NetworkState)
-
-    # Định nghĩa các Node
-    builder.add_node("supervisor", supervisor.route)
-    builder.add_node("network_expert", network_expert)
-    builder.add_node("extract_data", extractNetworkData)
-    builder.add_node("analyst", analyst)
-    builder.add_node("after_analyst", afterAnalyst)
-
-    # Thiết lập luồng chạy (Edges)
-    builder.add_edge(START, "supervisor")
-
-    # Luồng Thu thập: Expert -> Extract -> Quay lại Supervisor kiểm tra
-    builder.add_edge("network_expert", "extract_data")
-    builder.add_edge("extract_data", "supervisor")
-
-    # Luồng Phân tích: Analyst -> After Analyst (lưu report) -> Quay lại Supervisor để END
-    builder.add_edge("analyst", "after_analyst")
-    builder.add_edge("after_analyst", "supervisor")
-
-    # Biên dịch đồ thị với bộ nhớ checkpoint
-    graph = builder.compile(checkpointer=MemorySaver())
-
-    return graph
+        return Command(goto=END)
