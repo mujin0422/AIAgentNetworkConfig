@@ -3,12 +3,10 @@ from pydantic import BaseModel, Field
 from langgraph.graph import MessagesState
 
 class DeviceConnection(BaseModel): 
-    """Thông tin kết nối thiết bị"""
     hostname: str = Field(default="")
     device_type: str = Field(default="cisco_ios")
     username: str = Field(default="")
     password: str = Field(default="")
-    secret: Optional[str] = Field(default=None)
     port: int = Field(default=22)
 
     class Config:
@@ -17,7 +15,6 @@ class DeviceConnection(BaseModel):
         extra = "ignore"
 
 class NetworkState(MessagesState):
-    """State cho network agent"""
     # Thông tin thiết bị
     target_device: Optional[DeviceConnection] = Field(default=None)
     devices: List[DeviceConnection] = Field(default_factory=list)
@@ -44,9 +41,9 @@ class NetworkState(MessagesState):
     incident_resolved: bool = Field(default=False)
     
     # Điều khiển luồng → dùng cùng với: Literal["network_expert", "analyst", "__end__"]
-    current_phase: str = Field(default="start") # start → collecting → analyzing → recommending → acting → finished
     next_agent: Optional[str] = Field(default="__end__") # "network_expert", "analyst", None (khi đã xong)
 
+# Dùng sau
 class Incident(BaseModel):
     """Mô hình sự cố"""
     id: str = Field(default="")

@@ -1,14 +1,13 @@
-import os
-from typing import Dict, Any, Optional
-from netmiko import ConnectHandler
 import yaml
-from src.tools.parser_tools import *
+from typing import Dict, Any
+from netmiko import ConnectHandler
+from config import settings
 
 def get_ssh_params():
     return {
-        'conn_timeout': int(os.getenv('SSH_TIMEOUT', 60)),
-        'auth_timeout': int(os.getenv('SSH_AUTH_TIMEOUT', 30)),
-        'global_delay_factor': float(os.getenv('SSH_DELAY_FACTOR', 2)),
+        'conn_timeout': int(settings.SSH_TIMEOUT),
+        'auth_timeout': int(settings.SSH_AUTH_TIMEOUT),
+        'global_delay_factor': float(settings.SSH_DELAY_FACTOR),
     }
 
 def get_device_config(device_identifier: str):
@@ -16,14 +15,8 @@ def get_device_config(device_identifier: str):
         with open("config/devices.yaml", 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
 
-            # Nếu truyền vào tên (P1, PE1...)
             if device_identifier in config:
                 return config[device_identifier]
-                
-            # Nếu truyền vào địa chỉ IP
-            for key, val in config.items():
-                if val.get("hostname") == device_identifier:
-                    return val
                     
             return None 
     except Exception as e:
@@ -48,8 +41,6 @@ def connect_to_device(target: str) -> Dict[str, Any]:
         'password': password,
         'secret': secret,
         'port': port,
-        'session_timeout': 15,
-        'fast_cli': False,
         **get_ssh_params()
     }
     

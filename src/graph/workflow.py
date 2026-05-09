@@ -50,7 +50,7 @@ def createNetworkAssistantGraph():
     # Khởi tạo đồ thị với NetworkState
     builder = StateGraph(NetworkState)
 
-    # Định nghĩa các Node
+    #  Định nghĩa các Node
     builder.add_node("supervisor", supervisor.route)
     builder.add_node("network_expert", network_expert)
     builder.add_node("extract_data", extractNetworkData)
@@ -59,12 +59,8 @@ def createNetworkAssistantGraph():
 
     # Thiết lập luồng chạy (Edges)
     builder.add_edge(START, "supervisor")
-
-    # Luồng Thu thập: Expert -> Extract -> Quay lại Supervisor kiểm tra
     builder.add_edge("network_expert", "extract_data")
     builder.add_edge("extract_data", "supervisor")
-
-    # Luồng Phân tích: Analyst -> After Analyst (lưu report) -> Quay lại Supervisor để END
     builder.add_edge("analyst", "after_analyst")
     builder.add_edge("after_analyst", "supervisor")
 

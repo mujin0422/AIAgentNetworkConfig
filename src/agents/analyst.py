@@ -1,6 +1,5 @@
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import AIMessage
 
 def create_analyst():
     system_prompt = """
@@ -41,10 +40,10 @@ def create_analyst():
     ### 3. Các bước Thực thi
     (Chỉ định chính xác Network Expert cần gọi những Tool nào, với tham số ra sao).
     """
-    
+
     llm = ChatOllama(
         model="qwen3-vl:235b-cloud",
-        temperature=0.2,
+        temperature=0.1,
         base_url="http://localhost:11434",
         num_predict=1024,
     )

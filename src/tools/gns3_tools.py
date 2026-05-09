@@ -1,22 +1,13 @@
 import requests
 from langchain_core.tools import tool
 from langgraph.types import interrupt
-from langgraph.errors import GraphInterrupt
-
-GNS3_IP = "127.0.0.1"
-GNS3_PORT = "3080"
-BASE_URL = f"http://{GNS3_IP}:{GNS3_PORT}/v2"
-PROJECT_ID = "f900d9db-2b75-4a90-8d6e-59b49f92af35"
+from core.connection import GNS3_URL_LINKS, GNS3_URL_NODES
 
 @tool
 def get_topology_links() -> str:
-    """
-    Lấy sơ đồ nối dây thực tế giữa các Router trong GNS3.
-    Dùng công cụ này để biết cổng nào của R1 nối với cổng nào của R2.
-    """
-    url = f"{BASE_URL}/projects/{PROJECT_ID}/links"
+    """Lấy thông tin kết nối giữa các thiết bị trong GNS3 và trình bày dưới dạng sơ đồ kết nối (topology)."""
     try:
-        response = requests.get(url)
+        response = requests.get(GNS3_URL_LINKS)
         response.raise_for_status()
         links = response.json()
         
@@ -26,7 +17,6 @@ def get_topology_links() -> str:
         output = "SƠ ĐỒ KẾT NỐI (TOPOLOGY):\n"
         for link in links:
             n = link['nodes']
-            # Trích xuất label để lấy tên thiết bị (R1, R2...)
             node_a = n[0].get('label', {}).get('text', n[0]['node_id'][:5])
             node_b = n[1].get('label', {}).get('text', n[1]['node_id'][:5])
             output += f"- {node_a} (Port {n[0]['port_number']}) <---> {node_b} (Port {n[1]['port_number']})\n"
@@ -36,12 +26,9 @@ def get_topology_links() -> str:
 
 @tool
 def check_nodes_status() -> str:
-    """
-    Kiểm tra trạng thái (đang chạy hay đang tắt) của các thiết bị trong GNS3.
-    """
-    url = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
+    """Kiểm tra trạng thái của tất cả thiết bị trong GNS3 và trả về báo cáo chi tiết."""
     try:
-        response = requests.get(url)
+        response = requests.get(GNS3_URL_NODES)
         response.raise_for_status()
         nodes = response.json()
         
@@ -55,16 +42,15 @@ def check_nodes_status() -> str:
 @tool
 def start_node(node_name: str) -> str:
     """Sử dụng công cụ này để bật nguồn (start) một thiết bị trong GNS3 khi nó đang ở trạng thái 'stopped'."""
-    url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
     try:
-        nodes_resp = requests.get(url_nodes)
+        nodes_resp = requests.get(GNS3_URL_NODES)
         nodes = nodes_resp.json()
         node_id = next((n['node_id'] for n in nodes if n['name'] == node_name), None)
         
         if not node_id:
             return f"Không tìm thấy thiết bị có tên {node_name} để bật."
 
-        url_start = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/start"
+        url_start = f"{GNS3_URL_NODES}/{node_id}/start"
         response = requests.post(url_start)
         if response.status_code in [200, 201, 204]:
             return f"Đã gửi lệnh khởi động thiết bị {node_name} thành công. Vui lòng đợi vài giây để thiết bị khởi động xong."
@@ -83,15 +69,14 @@ def stop_node(node_name: str) -> str:
         return "Đã hủy thao tác tắt nguồn bởi người dùng."
     
     try:
-        url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
-        nodes_resp = requests.get(url_nodes)
+        nodes_resp = requests.get(GNS3_URL_NODES)
         nodes = nodes_resp.json()
         node_id = next((n['node_id'] for n in nodes if n['name'] == node_name), None)
         
         if not node_id:
             return f"Không tìm thấy thiết bị có tên {node_name} để tắt."
 
-        url_stop = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/stop"
+        url_stop = f"{GNS3_URL_NODES}/{node_id}/stop"
         response = requests.post(url_stop)
         if response.status_code in [200, 201, 204]:
             return f"Đã tắt nguồn thiết bị {node_name} thành công."
@@ -102,9 +87,7 @@ def stop_node(node_name: str) -> str:
 
 @tool
 def restart_node(node_name: str) -> str:
-    """
-    KHỞI ĐỘNG LẠI (RESTART/RELOAD) MỘT THIẾT BỊ TRONG GNS3.
-    """
+    """KHỞI ĐỘNG LẠI (RESTART/RELOAD) MỘT THIẾT BỊ TRONG GNS3."""
     action_msg = f"CẢNH BÁO: Khởi động lại (Restart) thiết bị {node_name} trên GNS3."
     user_approval = interrupt(action_msg)
         
@@ -112,17 +95,15 @@ def restart_node(node_name: str) -> str:
         return "Đã hủy thao tác khởi động lại bởi người dùng."
     
     try:
-        url_nodes = f"{BASE_URL}/projects/{PROJECT_ID}/nodes"
-        nodes_resp = requests.get(url_nodes)
+        nodes_resp = requests.get(GNS3_URL_NODES)
         nodes = nodes_resp.json()
         node_id = next((n['node_id'] for n in nodes if n['name'] == node_name), None)
         
         if not node_id:
             return f"Không tìm thấy thiết bị có tên {node_name} để restart."
 
-        # Gửi lệnh stop, sau đó đợi 2 giây rồi start lại để giả lập reload
-        url_stop = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/stop"
-        url_start = f"{BASE_URL}/projects/{PROJECT_ID}/nodes/{node_id}/start"
+        url_stop = f"{GNS3_URL_NODES}/{node_id}/stop"
+        url_start = f"{GNS3_URL_NODES}/{node_id}/start"
         
         requests.post(url_stop)
         import time
