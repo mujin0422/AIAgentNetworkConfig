@@ -1,14 +1,13 @@
 import re
 from typing import Dict, Any
 from langchain_core.tools import tool
-from langgraph.types import interrupt
-from src.tools.network_connection import connect_to_device
+from core.network_connection import connectToDevice
 
 @tool
 def save_device_config(hostname: str) -> Dict[str, Any]:
     """LƯU CẤU HÌNH ĐANG CHẠY (RUNNING-CONFIG) VÀO BỘ NHỚ (STARTUP-CONFIG)."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -26,7 +25,7 @@ def get_running_config(hostname: str) -> Dict[str, Any]:
     Sử dụng lệnh này khi cần kiểm tra chi tiết cấu hình mà các lệnh show ngắn không cung cấp đủ.
     """
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -41,7 +40,7 @@ def get_running_config(hostname: str) -> Dict[str, Any]:
 def execute_show_command(command: str, hostname: str) -> Dict[str, Any]:
     """THỰC THI LỆNH SHOW BẤT KỲ TRÊN THIẾT BỊ CHỈ ĐỊNH."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -55,7 +54,7 @@ def execute_show_command(command: str, hostname: str) -> Dict[str, Any]:
 def ping_test(target_ip: str, source_hostname: str) -> Dict[str, Any]:
     """THỰC HIỆN LỆNH PING TỪ MỘT THIẾT BỊ NGUỒN ĐẾN IP ĐÍCH."""
     try:
-        conn_res = connect_to_device(source_hostname)
+        conn_res = connectToDevice(source_hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]

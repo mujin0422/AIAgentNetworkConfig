@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain_core.tools import tool
 from langgraph.types import interrupt
-from src.tools.network_connection import connect_to_device
+from core.network_connection import connectToDevice
 
 @tool
 def config_vlan(hostname: str, vlan_id: str, vlan_name: str = "") -> Dict[str, Any]:
@@ -13,7 +13,7 @@ def config_vlan(hostname: str, vlan_id: str, vlan_name: str = "") -> Dict[str, A
         return {"success": False, "error": "Đã hủy bởi người dùng."}    
     
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -35,7 +35,7 @@ def assign_vlan_access_port(hostname: str, interface: str, vlan_id: str) -> Dict
     if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -62,7 +62,7 @@ def assign_vlan_access_range(hostname: str, interface_range: str, vlan_id: str) 
     if str(user_approval).lower() not in ['y', 'yes', 'ok', 'có', 'co']:
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -90,7 +90,7 @@ def config_switch_trunk(hostname: str, interface: str, allowed_vlans: str = "all
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -118,7 +118,7 @@ def config_switch_trunk(hostname: str, interface: str, allowed_vlans: str = "all
 def get_vlan_switch_brief(hostname: str) -> Dict[str, Any]:
     """XEM THÔNG TIN CÁC VLAN ĐANG CÓ TRÊN THIẾT BỊ."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -133,7 +133,7 @@ def get_vlan_switch_brief(hostname: str) -> Dict[str, Any]:
 def get_trunk_interfaces(hostname: str) -> Dict[str, Any]:
     """XEM THÔNG TIN CÁC CỔNG TRUNK ĐANG CÓ TRÊN THIẾT BỊ."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]

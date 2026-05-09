@@ -1,14 +1,14 @@
 from typing import Dict, Any
 from langchain_core.tools import tool
 from langgraph.types import interrupt
-from src.tools.network_connection import connect_to_device
+from core.network_connection import connectToDevice
 from src.tools.parser_tools import parse_interface_ip
 
 @tool
 def get_interface_ip(hostname: str) -> Dict[str, Any]:
     """LẤY ĐỊA CHỈ IP TRÊN TẤT CẢ CÁC INTERFACE CỦA MỘT THIẾT BỊ."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -28,7 +28,7 @@ def get_interface_ip(hostname: str) -> Dict[str, Any]:
 def get_routing_table(hostname: str) -> Dict[str, Any]:
     """LẤY BẢNG ĐỊNH TUYẾN CỦA ROUTER CỤ THỂ."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -42,7 +42,7 @@ def get_routing_table(hostname: str) -> Dict[str, Any]:
 def get_ospf_neighbors(hostname: str) -> Dict[str, Any]:
     """KIỂM TRA DANH SÁCH LÁNG GIỀNG OSPF."""
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -63,7 +63,7 @@ def config_interface_ip(hostname: str, interface: str, ip_address: str, subnet_m
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -95,7 +95,7 @@ def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -119,7 +119,7 @@ def config_static_route(hostname: str, destination: str, subnet_mask: str, next_
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -140,7 +140,7 @@ def config_mpls_ip_interface(hostname: str, interface: str) -> Dict[str, Any]:
         return {"success": False, "error": "Đã hủy bởi người dùng."}
 
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
@@ -171,7 +171,7 @@ def config_router_sub_interface(hostname: str, main_interface: str, sub_int_numb
         return {"success": False, "error": "Đã hủy bởi người dùng."}
 
     try:
-        conn_res = connect_to_device(hostname)
+        conn_res = connectToDevice(hostname)
         if not conn_res["success"]: return conn_res
 
         connection = conn_res["connection"]
