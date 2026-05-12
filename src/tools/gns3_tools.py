@@ -5,21 +5,39 @@ from core.connection import GNS3_URL_LINKS, GNS3_URL_NODES
 
 @tool
 def get_topology_links() -> str:
-    """Lấy thông tin kết nối giữa các thiết bị trong GNS3 và trình bày dưới dạng sơ đồ kết nối (topology)."""
+    """Lấy thông tin kết nối chi tiết: Tên thiết bị và cổng tương ứng trong GNS3."""
     try:
-        response = requests.get(GNS3_URL_LINKS)
-        response.raise_for_status()
-        links = response.json()
+        # 1. Lấy danh sách tất cả các node để tạo bảng ánh xạ ID -> Name
+        # Giả định GNS3_URL_NODES là URL đến project nodes (ví dụ: .../nodes)
+        node_res = requests.get(GNS3_URL_NODES)
+        node_res.raise_for_status()
+        nodes_list = node_res.json()
+        
+        # Tạo dictionary mapping: {node_id: name}
+        node_map = {n['node_id']: n['name'] for n in nodes_list}
+
+        # 2. Lấy danh sách các link
+        link_res = requests.get(GNS3_URL_LINKS)
+        link_res.raise_for_status()
+        links = link_res.json()
         
         if not links:
             return "Không tìm thấy kết nối nào."
 
-        output = "SƠ ĐỒ KẾT NỐI (TOPOLOGY):\n"
+        output = "SƠ ĐỒ KẾT NỐI CHI TIẾT (TOPOLOGY):\n"
         for link in links:
             n = link['nodes']
-            node_a = n[0].get('label', {}).get('text', n[0]['node_id'][:5])
-            node_b = n[1].get('label', {}).get('text', n[1]['node_id'][:5])
-            output += f"- {node_a} (Port {n[0]['port_number']}) <---> {node_b} (Port {n[1]['port_number']})\n"
+            
+            id_a = n[0]['node_id']
+            name_a = node_map.get(id_a, f"Unknown({id_a[:5]})")
+            port_a = n[0]['label'].get('text', f"Port {n[0]['port_number']}")
+
+            id_b = n[1]['node_id']
+            name_b = node_map.get(id_b, f"Unknown({id_b[:5]})")
+            port_b = n[1]['label'].get('text', f"Port {n[1]['port_number']}")
+
+            output += f"- {name_a} ({port_a}) <---> {name_b} ({port_b})\n"
+            
         return output
     except Exception as e:
         return f"Lỗi lấy links: {str(e)}"

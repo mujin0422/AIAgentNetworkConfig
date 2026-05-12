@@ -80,7 +80,7 @@ def create_network_expert():
     
     llm = ChatOllama(
         model="qwen3-vl:235b-cloud",
-        temperature=0.1,
+        temperature=0.0,
         base_url="http://localhost:11434",
         num_predict=1024,
     )

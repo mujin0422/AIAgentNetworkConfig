@@ -7,7 +7,6 @@ from src.agents.analyst import create_analyst
 
 def extractNetworkData(state: NetworkState):
     """Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs"""
-
     messages = state.get("messages", [])
     new_outputs = {} 
 

@@ -17,5 +17,7 @@ class Settings:
     DEFAULT_DEVICE_USERNAME=os.getenv("DEFAULT_DEVICE_USERNAME")
     DEFAULT_DEVICE_PORT=os.getenv("DEFAULT_DEVICE_PORT")
     DEFAULT_DEVICE_PASSWORD=os.getenv("DEFAULT_DEVICE_PASSWORD")
-    
+
+    NVIDIA_API_KEY=os.getenv("NVIDIA_API_KEY")
+
 settings = Settings()
