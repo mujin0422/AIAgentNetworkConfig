@@ -6,21 +6,25 @@ from src.agents.network_expert import create_network_expert
 from src.agents.analyst import create_analyst
 
 def extractNetworkData(state: NetworkState):
-    """
-    Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs
-    giúp Supervisor nhận diện được dữ liệu đã được thu thập.
-    """
+    """ Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs. """
     messages = state.get("messages", [])
-    new_outputs = {} # Khởi tạo lại từ đầu để xóa dữ liệu cũ của phiên trước
+    new_outputs = {} 
     
+    # Duyệt ngược để xác định phạm vi tin nhắn từ sau câu hỏi cuối cùng của Human
+    relevant_messages = []
     for msg in reversed(messages):
+        if msg.type == "human":
+            break
+        relevant_messages.append(msg)
+            
+    # Duyệt xuôi các tin nhắn liên quan để giữ đúng thứ tự thời gian thực thi tool
+    for msg in reversed(relevant_messages):
         if msg.type == "tool":
             tool_name = getattr(msg, 'name', 'unknown_tool')
-            # Chỉ lấy kết quả mới nhất nếu 1 tool được gọi nhiều lần
+            
             if tool_name not in new_outputs:
-                new_outputs[tool_name] = msg.content
-        elif msg.type == "human":
-            break
+                new_outputs[tool_name] = []
+            new_outputs[tool_name].append(msg.content)
             
     return {
         "command_outputs": new_outputs,
@@ -28,17 +32,14 @@ def extractNetworkData(state: NetworkState):
     }
 
 def afterAnalyst(state: NetworkState):
-    """
-    Node xử lý sau khi Analyst phản hồi: 
-    Lưu nội dung phân tích vào final_report để main.py có thể hiển thị.
-    """
+    """ Node xử lý sau khi Analyst phản hồi: Lưu nội dung phân tích vào final_report để main.py có thể hiển thị. """
     messages = state.get("messages", [])
     last_content = messages[-1].content if messages else ""
     
     return {
         "analysis_results": {"status": "completed"}, 
         "current_phase": "analyzed",
-        "final_report": last_content # Chuyển câu trả lời của Agent thành báo cáo chính thức
+        "final_report": last_content
     }
 
 def createNetworkAssistantGraph():
