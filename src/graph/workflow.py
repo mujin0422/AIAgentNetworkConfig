@@ -6,26 +6,20 @@ from src.agents.network_expert import create_network_expert
 from src.agents.analyst import create_analyst
 
 def extractNetworkData(state: NetworkState):
-    """ Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs. """
+    """Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs"""
+
     messages = state.get("messages", [])
     new_outputs = {} 
-    
-    # Duyệt ngược để xác định phạm vi tin nhắn từ sau câu hỏi cuối cùng của Human
-    relevant_messages = []
+
     for msg in reversed(messages):
-        if msg.type == "human":
-            break
-        relevant_messages.append(msg)
-            
-    # Duyệt xuôi các tin nhắn liên quan để giữ đúng thứ tự thời gian thực thi tool
-    for msg in reversed(relevant_messages):
         if msg.type == "tool":
             tool_name = getattr(msg, 'name', 'unknown_tool')
-            
             if tool_name not in new_outputs:
-                new_outputs[tool_name] = []
-            new_outputs[tool_name].append(msg.content)
-            
+                new_outputs[tool_name] = msg.content
+
+        elif msg.type == "human":
+            break
+
     return {
         "command_outputs": new_outputs,
         "current_phase": "collected" if new_outputs else "start"
