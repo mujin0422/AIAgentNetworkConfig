@@ -79,11 +79,15 @@ def create_network_expert():
     - Trình bày log sạch sẽ, phân tách rõ ràng theo từng thiết bị.
     """
 
-    llm = ChatOllama(
-        model=os.getenv("NETWORK_EXPERT_MODEL", "gemma4"),
-        temperature=float(os.getenv("NETWORK_EXPERT_TEMPERATURE", "0.1")),
-        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        num_predict=int(os.getenv("NETWORK_EXPERT_NUM_PREDICT", "768")),
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+
+    llm = ChatNVIDIA(
+    model="nvidia/nemotron-3-super-120b-a12b",
+    api_key = os.getenv("NVIDIA_API_KEY"), 
+    temperature=0,
+    top_p=0.5,
+    max_tokens=1024,
     )
     
     agent = create_react_agent(

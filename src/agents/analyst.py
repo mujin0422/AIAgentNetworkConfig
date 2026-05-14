@@ -45,11 +45,15 @@ RÀO CẢN ĐẦU RA (OUTPUT CONSTRAINTS):
 (Chỉ định chính xác Network Expert cần gọi những Tool nào, với tham số ra sao).
 """
 
-    llm = ChatOllama(
-        model=os.getenv("ANALYST_MODEL", os.getenv("NETWORK_EXPERT_MODEL", "gemma4")),
-        temperature=float(os.getenv("ANALYST_TEMPERATURE", "0.1")),
-        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        num_predict=int(os.getenv("ANALYST_NUM_PREDICT", "512")),
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+
+    llm = ChatNVIDIA(
+    model="nvidia/nemotron-3-super-120b-a12b",
+    api_key = os.getenv("NVIDIA_API_KEY"), 
+    temperature=0,
+    top_p=0.5,
+    max_tokens=1024,
     )
 
     def analyst_node(state: Any) -> Dict[str, Any]:
