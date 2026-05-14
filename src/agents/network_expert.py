@@ -1,4 +1,6 @@
 import os
+from core.config import settings
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from src.tools.gns3_tools import(
@@ -79,15 +81,15 @@ def create_network_expert():
     - Trình bày log sạch sẽ, phân tách rõ ràng theo từng thiết bị.
     """
 
-    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
 
 
     llm = ChatNVIDIA(
-    model="nvidia/nemotron-3-super-120b-a12b",
-    api_key = os.getenv("NVIDIA_API_KEY"), 
-    temperature=0,
-    top_p=0.5,
-    max_tokens=1024,
+        model=settings.NVIDIA_MODEL,
+        api_key = settings.NVIDIA_API_KEY, 
+        temperature=0,
+        top_p=0.5,
+        max_tokens=1024,
     )
     
     agent = create_react_agent(
