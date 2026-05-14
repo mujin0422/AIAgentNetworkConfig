@@ -26,3 +26,7 @@ markdown==3.10.2
 tkhtmlview==0.3.2
 
 requests
+
+
+#Nếu dùng NVIDIA
+langchain-nvidia-ai-endpoints
