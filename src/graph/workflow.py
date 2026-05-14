@@ -32,14 +32,20 @@ def afterAnalyst(state: NetworkState):
     Node xử lý sau khi Analyst phản hồi: 
     Lưu nội dung phân tích vào final_report để main.py có thể hiển thị.
     """
+    # Lấy nội dung phản hồi của node analyst từ message cuối cùng.
+    # Với node analyst trả về llm trực tiếp (không ReAct agent), message cuối có thể không nằm đúng type.
     messages = state.get("messages", [])
-    last_content = messages[-1].content if messages else ""
-    
+    if not messages:
+        last_content = ""
+    else:
+        last_content = getattr(messages[-1], "content", "") or ""
+
     return {
-        "analysis_results": {"status": "completed"}, 
+        "analysis_results": {"status": "completed"},
         "current_phase": "analyzed",
-        "final_report": last_content # Chuyển câu trả lời của Agent thành báo cáo chính thức
+        "final_report": last_content,
     }
+
 
 def createNetworkAssistantGraph():
     # Khởi tạo các thành phần

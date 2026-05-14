@@ -239,6 +239,7 @@ wr
 hostname CE-1A
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -283,6 +284,7 @@ wr
 hostname CE-1B
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -315,6 +317,7 @@ wr
 hostname CE-2A
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -359,6 +362,7 @@ wr
 hostname CE-2B
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -391,6 +395,7 @@ wr
 hostname Switch1
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -435,6 +440,7 @@ wr
 hostname Switch2
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -453,6 +459,7 @@ wr
 hostname Switch3
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4
@@ -497,6 +504,7 @@ wr
 hostname Switch4
 ip domain-name aiagent.local
 crypto key generate rsa
+yes
 2048
 username admin privilege 15 password 123456
 line vty 0 4

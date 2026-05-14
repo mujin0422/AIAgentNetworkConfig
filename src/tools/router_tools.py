@@ -1,26 +1,36 @@
 from typing import Dict, Any
 from langchain_core.tools import tool
 from langgraph.types import interrupt
-from src.tools.network_connection import connect_to_device
 from src.tools.parser_tools import parse_interface_ip
+from src.tools.network_connection import execute_on_device
 
 @tool
 def get_interface_ip(hostname: str) -> Dict[str, Any]:
     """LẤY ĐỊA CHỈ IP TRÊN TẤT CẢ CÁC INTERFACE CỦA MỘT THIẾT BỊ."""
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_command_timing("show ip interface brief")
+            }
+        )
 
-        connection = conn_res["connection"]
-        output = connection.send_command_timing("show ip interface brief")
-        connection.disconnect() 
-        
+        if not result["success"]:
+            return result
+
+        output = result.get("output", "")
         try:
             interfaces = parse_interface_ip(output)
         except Exception:
             interfaces = {}
-               
-        return {"success": True, "device": hostname, "interfaces": interfaces, "output": output}
+
+        return {
+            "success": True,
+            "device": hostname,
+            "interfaces": interfaces,
+            "output": output,
+            "timings": result.get("timings")
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -28,13 +38,21 @@ def get_interface_ip(hostname: str) -> Dict[str, Any]:
 def get_routing_table(hostname: str) -> Dict[str, Any]:
     """LẤY BẢNG ĐỊNH TUYẾN CỦA ROUTER CỤ THỂ."""
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_command_timing("show ip route")
+            }
+        )
 
-        connection = conn_res["connection"]
-        routing_table = connection.send_command_timing("show ip route")
-        connection.disconnect()
-        return {"success": True, "device": hostname, "output": routing_table}
+        if not result["success"]:
+            return result
+        return {
+            "success": True,
+            "device": hostname,
+            "output": result.get("output"),
+            "timings": result.get("timings")
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -42,14 +60,21 @@ def get_routing_table(hostname: str) -> Dict[str, Any]:
 def get_ospf_neighbors(hostname: str) -> Dict[str, Any]:
     """KIỂM TRA DANH SÁCH LÁNG GIỀNG OSPF."""
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_command_timing("show ip ospf neighbor")
+            }
+        )
+        if not result["success"]:
+            return result
 
-        connection = conn_res["connection"]
-        output = connection.send_command_timing("show ip ospf neighbor")
-        connection.disconnect()
-        
-        return {"success": True, "device": hostname, "output": output}
+        return {
+            "success": True,
+            "device": hostname,
+            "output": result.get("output"),
+            "timings": result.get("timings")
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
     
@@ -63,24 +88,27 @@ def config_interface_ip(hostname: str, interface: str, ip_address: str, subnet_m
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_config_set([
+                    f"interface {interface}",
+                    f"ip address {ip_address} {subnet_mask}",
+                    "no shutdown"
+                ]),
+                "config_commands": [f"interface {interface}", f"ip address {ip_address} {subnet_mask}", "no shutdown"]
+            }
+        )
 
-        connection = conn_res["connection"]
-        config_commands = [
-            f"interface {interface}",
-            f"ip address {ip_address} {subnet_mask}",
-            "no shutdown"
-        ]
-            
-        output = connection.send_config_set(config_commands)
-        connection.disconnect()
-        
+        if not result["success"]:
+            return result
+
         return {
-            "success": True, 
-            "device": hostname, 
-            "action": "config_interface_ip", 
-            "output": output
+            "success": True,
+            "device": hostname,
+            "action": "config_interface_ip",
+            "output": result.get("output"),
+            "timings": result.get("timings")
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -95,17 +123,27 @@ def config_ospf(hostname: str, process_id: str, network: str, wildcard_mask: str
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_config_set([
+                    f"router ospf {process_id}",
+                    f"network {network} {wildcard_mask} area {area}"
+                ]),
+                "config_commands": [f"router ospf {process_id}", f"network {network} {wildcard_mask} area {area}"]
+            }
+        )
 
-        connection = conn_res["connection"]
-        config_commands = [
-            f"router ospf {process_id}",
-            f"network {network} {wildcard_mask} area {area}"
-        ]
-        output = connection.send_config_set(config_commands)
-        connection.disconnect()
-        return {"success": True, "device": hostname, "action": "config_ospf", "output": output}
+        if not result["success"]:
+            return result
+
+        return {
+            "success": True,
+            "device": hostname,
+            "action": "config_ospf",
+            "output": result.get("output"),
+            "timings": result.get("timings")
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -119,14 +157,24 @@ def config_static_route(hostname: str, destination: str, subnet_mask: str, next_
         return {"success": False, "error": "Đã hủy bởi người dùng."}
     
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_config_set([f"ip route {destination} {subnet_mask} {next_hop}"]),
+                "config_command": f"ip route {destination} {subnet_mask} {next_hop}"
+            }
+        )
 
-        connection = conn_res["connection"]
-        config_commands = [f"ip route {destination} {subnet_mask} {next_hop}"]
-        output = connection.send_config_set(config_commands)
-        connection.disconnect()
-        return {"success": True, "device": hostname, "action": "config_static_route", "output": output}
+        if not result["success"]:
+            return result
+
+        return {
+            "success": True,
+            "device": hostname,
+            "action": "config_static_route",
+            "output": result.get("output"),
+            "timings": result.get("timings")
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
    
@@ -140,23 +188,26 @@ def config_mpls_ip_interface(hostname: str, interface: str) -> Dict[str, Any]:
         return {"success": False, "error": "Đã hủy bởi người dùng."}
 
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_config_set([
+                    f"interface {interface}",
+                    "mpls ip"
+                ]),
+                "config_commands": [f"interface {interface}", "mpls ip"]
+            }
+        )
 
-        connection = conn_res["connection"]
-        config_commands = [
-            f"interface {interface}",
-            "mpls ip"
-        ]
-            
-        output = connection.send_config_set(config_commands)
-        connection.disconnect()
-        
+        if not result["success"]:
+            return result
+
         return {
-            "success": True, 
-            "device": hostname, 
-            "action": "config_mpls_ip_interface", 
-            "output": output
+            "success": True,
+            "device": hostname,
+            "action": "config_mpls_ip_interface",
+            "output": result.get("output"),
+            "timings": result.get("timings")
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -171,27 +222,35 @@ def config_router_sub_interface(hostname: str, main_interface: str, sub_int_numb
         return {"success": False, "error": "Đã hủy bởi người dùng."}
 
     try:
-        conn_res = connect_to_device(hostname)
-        if not conn_res["success"]: return conn_res
+        result = execute_on_device(
+            hostname,
+            lambda connection: {
+                "output": connection.send_config_set([
+                    f"interface {main_interface}.{sub_int_number}",
+                    f"encapsulation dot1Q {vlan_id}",
+                    f"ip address {ip_address} {subnet_mask}",
+                    f"interface {main_interface}",
+                    "no shutdown"
+                ]),
+                "config_commands": [
+                    f"interface {main_interface}.{sub_int_number}",
+                    f"encapsulation dot1Q {vlan_id}",
+                    f"ip address {ip_address} {subnet_mask}",
+                    f"interface {main_interface}",
+                    "no shutdown"
+                ]
+            }
+        )
 
-        connection = conn_res["connection"]
-        
-        config_commands = [
-            f"interface {main_interface}.{sub_int_number}",
-            f"encapsulation dot1Q {vlan_id}",
-            f"ip address {ip_address} {subnet_mask}",
-            f"interface {main_interface}",
-            "no shutdown"
-        ]
-            
-        output = connection.send_config_set(config_commands)
-        connection.disconnect()
-        
+        if not result["success"]:
+            return result
+
         return {
-            "success": True, 
-            "device": hostname, 
-            "action": "config_sub_interface", 
-            "output": output
+            "success": True,
+            "device": hostname,
+            "action": "config_sub_interface",
+            "output": result.get("output"),
+            "timings": result.get("timings")
         }
     except Exception as e:
         return {"success": False, "error": str(e)}    

@@ -8,9 +8,8 @@ Yêu cầu: pip install discord.py python-dotenv
 import os
 import sys
 import asyncio
-import json
 import logging
-from datetime import datetime
+from discord.ui import View, Button
 
 # Đảm bảo project root trong PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -20,7 +19,7 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
-from src.core_engine import initialize_system, run_agent_query
+from src.main import process_query_async, initializeSystem
 
 # Load biến môi trường
 load_dotenv()
@@ -36,12 +35,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+pending_sessions = {}
+
 # --- Cấu hình Intents ---
 intents = discord.Intents.default()
-intents.message_content = True  # BẮT BUỘC: phải bật trong Discord Developer Portal
+intents.message_content = True
 
-bot = commands.Bot(command_prefix=DISCORD_PREFIX + " ", intents=intents)
-# Lưu ý: prefix là "!net " (có dấu cách) để phân biệt với các lệnh khác
+# Tăng heartbeat timeout để tránh warning khi LLM chạy lâu
+bot = commands.Bot(
+    command_prefix=DISCORD_PREFIX + " ",
+    intents=intents,
+    heartbeat_timeout=150.0  # Tăng lên 150 giây
+)
 
 
 @bot.event
@@ -52,7 +57,7 @@ async def on_ready():
 
     # Khởi tạo hệ thống AI Agent (blocking → chạy trong thread)
     logger.info("Đang khởi tạo Network AI Agent...")
-    success = await asyncio.to_thread(initialize_system)
+    success = await asyncio.to_thread(initializeSystem)
 
     if success:
         logger.info("[OK] Network AI Agent đã sẵn sàng!")
@@ -76,106 +81,107 @@ async def on_ready():
 @bot.event
 async def on_message(message: discord.Message):
     """Xử lý tin nhắn trực tiếp (không cần prefix nếu trong channel đúng)"""
-    # Bỏ qua tin nhắn của chính bot
     if message.author == bot.user:
         return
 
-    # Nếu có prefix chuẩn (!net <query>)
     if message.content.startswith(DISCORD_PREFIX + " "):
         await bot.process_commands(message)
         return
 
-    # Nếu KHÔNG có prefix nhưng tin nhắn nằm trong channel được chỉ định
     if DISCORD_CHANNEL_ID:
         try:
             target_channel_id = int(DISCORD_CHANNEL_ID)
             if message.channel.id == target_channel_id:
-                # Tự động xử lý như một câu lệnh
                 await handle_network_query(message, message.content)
                 return
         except ValueError:
             pass
 
-    # Các tin nhắn khác bỏ qua
     await bot.process_commands(message)
 
 
+class ApprovalView(View):
+    def __init__(self, interrupt_msg: str, user_id: int, thread_id: str, timeout=120):
+        super().__init__(timeout=timeout)
+        self.interrupt_msg = interrupt_msg
+        self.user_id = user_id
+        self.thread_id = thread_id
+        self.response = None
+
+    @discord.ui.button(label="✅ ĐỒNG Ý", style=discord.ButtonStyle.success, emoji="✅")
+    async def approve(self, interaction: discord.Interaction, button: Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Bạn không phải người yêu cầu!", ephemeral=True)
+            return
+        self.response = "yes"
+        self.stop()
+        pending_sessions[self.thread_id] = "yes"
+        await interaction.response.send_message(
+            "✅ **Đã đồng ý!** Đang thực thi lệnh cấu hình...",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="❌ TỪ CHỐI", style=discord.ButtonStyle.danger, emoji="❌")
+    async def deny(self, interaction: discord.Interaction, button: Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Bạn không phải người yêu cầu!", ephemeral=True)
+            return
+        self.response = "no"
+        self.stop()
+        pending_sessions[self.thread_id] = "no"
+        await interaction.response.send_message(
+            "❌ **Đã từ chối!** Hủy lệnh cấu hình.",
+            ephemeral=True
+        )
+
+
 async def handle_network_query(message: discord.Message, query: str):
-    """
-    Chạy agent với câu hỏi và gửi kết quả về Discord.
-    Chạy agent trong thread riêng để không block event loop của Discord.
-    """
-    # Đang typing...
-    async with message.channel.typing():
-        thread_id = f"discord_{message.author.id}_{int(datetime.now().timestamp())}"
+    """Xử lý truy vấn mạng từ Discord"""
+    thread_id = f"discord_{message.author.id}_{message.channel.id}"
 
-        # Chạy agent (blocking) trong thread
-        result = await asyncio.to_thread(run_agent_query, query, thread_id)
+    processing_msg = await message.reply("🔄 **Đang xử lý yêu cầu...**")
 
-    if not result["success"]:
-        error_msg = f"**Lỗi:** {result.get('error', 'Không rõ nguyên nhân')}"
-        await message.reply(error_msg)
-        return
+    async def on_interrupt(interrupt_msg: str):
+        """Callback khi cần xác nhận từ user"""
+        pending_sessions.pop(thread_id, None)
+        view = ApprovalView(interrupt_msg, message.author.id, thread_id)
+        confirm_msg = await message.reply(
+            f"⚠️ **CẢNH BÁO BẢO MẬT**\n```\n{interrupt_msg}\n```\nBạn có đồng ý thực thi không?",
+            view=view
+        )
+        try:
+            await view.wait()
+            result = pending_sessions.pop(thread_id, "no")
+            await confirm_msg.delete()
+            return result
+        except Exception:
+            pending_sessions.pop(thread_id, None)
+            await confirm_msg.delete()
+            return "no"
 
-    # --- Định dạng kết quả gửi về Discord ---
-    parts = []
+    try:
+        result = await process_query_async(
+            query=query,
+            thread_id=thread_id,
+            on_interrupt=on_interrupt
+        )
 
-    # 1. Phần phân tích của Analyst
-    analysis = result.get("analysis", "")
-    if analysis:
-        parts.append("## Phân tích\n")
-        parts.append(analysis)
+        await processing_msg.delete()
 
-    # 2. Phần raw output từ thiết bị
-    raw_outputs = result.get("raw_outputs", {})
-    if raw_outputs:
-        parts.append("\n---\n")
-        parts.append("## Dữ liệu thô từ thiết bị\n")
-        for tool_name, output in raw_outputs.items():
-            # Làm sạch output
-            display_text = str(output)
-            try:
-                parsed = json.loads(display_text)
-                if isinstance(parsed, dict):
-                    if parsed.get("success") is False:
-                        display_text = f"Lỗi: {parsed.get('error', 'Không rõ')}"
-                    elif "output" in parsed:
-                        display_text = str(parsed["output"])
-            except Exception:
-                pass
+        if len(result) > 1900:
+            for i in range(0, len(result), 1900):
+                await message.reply(result[i:i+1900])
+        else:
+            await message.reply(result)
 
-            parts.append(f"**`{tool_name}`**")
-            parts.append(f"```\n{display_text[:1900]}\n```")
-
-    # Gửi kết quả (cắt nếu quá dài)
-    full_response = "\n".join(parts)
-    if len(full_response) > 1900:
-        # Gửi phần phân tích trước
-        if analysis:
-            await message.reply(f"##Phân tích\n{analysis[:1900]}")
-
-        # Gửi raw output riêng, cắt từng phần
-        for tool_name, output in raw_outputs.items():
-            display_text = str(output)
-            try:
-                parsed = json.loads(display_text)
-                if isinstance(parsed, dict) and "output" in parsed:
-                    display_text = str(parsed["output"])
-            except Exception:
-                pass
-
-            chunk = f"**`{tool_name}`**\n```\n{display_text[:1900]}\n```"
-            await message.channel.send(chunk)
-    else:
-        await message.reply(full_response)
+    except Exception as e:
+        await processing_msg.delete()
+        await message.reply(f"❌ **Lỗi:** {str(e)}")
 
 
 @bot.command(name="net")
 async def net_command(ctx: commands.Context, *, query: str):
-    """
-    Lệnh: !net <câu hỏi>
-    Ví dụ: !net show ip interface brief
-    """
+    """Lệnh: !net <câu hỏi>"""
     await handle_network_query(ctx.message, query)
 
 
@@ -198,7 +204,6 @@ def main():
     if not DISCORD_TOKEN:
         logger.error("Thiếu DISCORD_BOT_TOKEN! Hãy tạo file .env và thêm token.")
         print("\nLỗi: Không tìm thấy DISCORD_BOT_TOKEN trong .env")
-        print("Hướng dẫn: xem docs/discord_setup.md để biết cách lấy token.")
         sys.exit(1)
 
     logger.info("Khởi động Discord Bot...")
@@ -207,4 +212,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

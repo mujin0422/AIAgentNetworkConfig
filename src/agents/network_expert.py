@@ -1,3 +1,4 @@
+import os
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from src.tools.gns3_tools import(
@@ -77,13 +78,12 @@ def create_network_expert():
     - Cung cấp toàn bộ output thô của lệnh cho Analyst. Không tự kết luận nguyên nhân gốc rễ, hãy để Analyst làm việc đó.
     - Trình bày log sạch sẽ, phân tách rõ ràng theo từng thiết bị.
     """
-    
+
     llm = ChatOllama(
-        model="qwen3-vl:235b-cloud",
-        #model="finalend/hermes-3-llama-3.1:8b",
-        temperature=0.1,
-        base_url="http://localhost:11434",
-        num_predict=1024,
+        model=os.getenv("NETWORK_EXPERT_MODEL", "gemma4"),
+        temperature=float(os.getenv("NETWORK_EXPERT_TEMPERATURE", "0.1")),
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        num_predict=int(os.getenv("NETWORK_EXPERT_NUM_PREDICT", "768")),
     )
     
     agent = create_react_agent(

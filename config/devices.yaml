@@ -42,7 +42,7 @@ CE-1B:
 
 CE-2A:
   hostname: "127.0.0.1"
-  port: 50010                 # Cập nhật số port thực tế của PE2
+  port: 5010                 # Cập nhật số port thực tế của PE2
   device_type: "cisco_ios_telnet"
   username: "admin"
   password: "123456"
