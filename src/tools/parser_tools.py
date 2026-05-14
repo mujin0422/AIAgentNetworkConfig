@@ -1,14 +1,6 @@
-import re
 from typing import Dict, List, Any
 
 def parse_cdp_output(output: str) -> Dict[str, Any]:
-    """
-    Phân tích output của lệnh 'show cdp neighbors detail' để trích xuất thông tin thiết bị lân cận.
-    Args:
-        output: Output từ lệnh 'show cdp neighbors detail'
-    Returns:
-        Dict chứa danh sách các thiết bị lân cận và tổng hợp thông tin
-    """
     neighbors = []
     lines = output.split('\n')
     current = {}
@@ -34,13 +26,6 @@ def parse_cdp_output(output: str) -> Dict[str, Any]:
     return neighbors
 
 def parse_interface_ip(output: str) -> List[Dict[str, Any]]:
-    """
-    Phân tích output của lệnh 'show ip interface brief' để trích xuất thông tin IP trên các interface.
-    Args:
-        output: Output từ lệnh 'show ip interface brief'
-    Returns:
-        List các interface với IP address và trạng thái
-    """
     interfaces = []
     lines = output.strip().split('\n')
     

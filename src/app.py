@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import threading
 import time
-import warnings
 import markdown
 from tkhtmlview import HTMLLabel
 from PIL import Image
@@ -13,8 +12,6 @@ from src.main import checkGNS3Connectivity, loadDeviceConfig, createDeviceConnec
 # --- CẤU HÌNH GIAO DIỆN ---
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
-# Bỏ cảnh báo không liên quan đến chức năng chính của ứng dụng
-warnings.filterwarnings("ignore", message=".*Deserializing unregistered type.*")
 
 class NetworkAssistantApp(ctk.CTk):
     def __init__(self):
@@ -52,13 +49,13 @@ class NetworkAssistantApp(ctk.CTk):
             corner_radius=20,
             border_width=1,
             border_color="#333333",
-            fg_color="#1E1E1E", # Nền xám đậm cho ô nhập liệu
-            text_color="#FFFFFF" # Chữ trắng
+            fg_color="#1E1E1E", 
+            text_color="#FFFFFF"
         )
         self.entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
         self.entry.bind("<Return>", lambda event: self.sendMessage())
 
-        # 2.2. Nút gửi với icon (nếu có), nền xám đen, hover sáng hơn)
+        # 2.2. Nút gửi với icon
         try:
             icon_image = ctk.CTkImage(
                 light_image=Image.open("images/icon/send.png"),
@@ -88,14 +85,14 @@ class NetworkAssistantApp(ctk.CTk):
         container.pack(fill="x", pady=10, padx=5)
 
         if sender == "user":
-            # Tin nhắn User: Căn phải, nền xám tối, chữ trắng
+            # Tin nhắn User
             bubble = ctk.CTkFrame(container, fg_color="#2B2B2B", corner_radius=20)
             bubble.pack(side="right", padx=(50, 5))
             lbl = ctk.CTkLabel(bubble, text=text, font=("Roboto", 15), text_color="#FFFFFF", wraplength=450, justify="left")
             lbl.pack(padx=20, pady=10)
 
         elif sender == "ai":
-            # Tin nhắn AI: Căn trái, có icon ✨, chữ trắng
+            # Tin nhắn AI
             avatar = ctk.CTkLabel(container, text="✨", font=("Roboto", 22), text_color="#1a73e8")
             avatar.pack(side="left", anchor="nw", padx=(5, 10), pady=5)
             
@@ -111,20 +108,17 @@ class NetworkAssistantApp(ctk.CTk):
             # 3. PHÁ BỎ CÁC THẺ GÂY MARGIN, TỰ ĐIỀU KHIỂN XUỐNG DÒNG BẰNG <br>
             html_content = html_content.replace('<h3>', '<b style="color: #FFFFFF; font-family: Roboto; font-size:12px;">')
             html_content = html_content.replace('</h3>', '</b><br>')
-            
             html_content = html_content.replace('<ul>', '')
             html_content = html_content.replace('</ul>', '<br>')
-            
             html_content = html_content.replace('<li>', '<span style="color: #FFFFFF; font-family: Roboto; font-size: 12px;"> - ')
             html_content = html_content.replace('</li>', '</span><br>')
-            
             html_content = html_content.replace('<p>', '<span style="color: #FFFFFF; font-family: Roboto; font-size: 12px;">')
             html_content = html_content.replace('</p>', '</span><br>')
             
             if html_content.endswith('<br>'):
                 html_content = html_content[:-4]
 
-            # 4. Dùng HTMLLabel để hiển thị
+            # 4. Dùng HTMLLabel để hiển thị & Tự động co giãn chiều cao
             box = HTMLLabel(
                 bubble, 
                 html=html_content, 
@@ -133,8 +127,6 @@ class NetworkAssistantApp(ctk.CTk):
                 highlightthickness=0
             )
             box.pack(fill="both", expand=True, padx=15, pady=10)
-            
-            # 5. Tự động co giãn chiều cao
             box.fit_height()
 
         elif sender == "system":
@@ -168,7 +160,7 @@ class NetworkAssistantApp(ctk.CTk):
     # Khởi tạo backend trong thread riêng để không block UI
     def initBackend(self):
         self.is_waiting_approval = False # Thêm cờ trạng thái duyệt
-        self.addMessage("system", "Đang khởi tạo kết nối GNS3 và nạp Agent...") # Thông báo khởi tạo
+        self.addMessage("system", "Đang khởi tạo kết nối GNS3 và nạp Agent...") 
         threading.Thread(target=self.initTask, daemon=True).start() # Khởi tạo backend trong thread riêng để không block UI
 
     # Hàm khởi tạo backend, kiểm tra kết nối GNS3, nạp cấu hình thiết bị và tạo graph
@@ -207,10 +199,8 @@ class NetworkAssistantApp(ctk.CTk):
     def askUserApproval(self, interrupt_msg):
         self.hideLoading()
         self.is_waiting_approval = True
-        
         # Định dạng nội dung cảnh báo bằng Markdown
-        approval_text = f"**⚠️ YÊU CẦU PHÊ DUYỆT TỪ HỆ THỐNG:**\n\n{interrupt_msg}\n\n👉 *Vui lòng gõ **'yes'** (hoặc y, ok) vào ô chat để đồng ý thực thi, hoặc gõ **'no'** để hủy bỏ.*"
-        
+        approval_text = f"**YÊU CẦU PHÊ DUYỆT TỪ HỆ THỐNG:**\n\n{interrupt_msg}\n\n *Vui lòng gõ **'yes'** (hoặc y, ok) vào ô chat để đồng ý thực thi, hoặc gõ **'no'** để hủy bỏ.*"
         # In thông báo ra màn hình chat
         self.addMessage("ai", approval_text)
         self.send_btn.configure(state="normal")
@@ -218,72 +208,31 @@ class NetworkAssistantApp(ctk.CTk):
     # Hàm xử lý phản hồi từ AI, cập nhật log và hiển thị kết quả cuối cùng, phân biệt giữa dữ liệu thô và phân tích của Analyst
     def processAi(self, user_text, is_resume=False):
         config = {"configurable": {"thread_id": self.thread_id}}
-        final_response = ""
-        log_text = ""
-
         try:
-            # 1. Kích hoạt Graph (Tiếp tục nếu đang kẹt ở HITL, hoặc chạy mới)
+            # Sử dụng stream_mode="updates" để nhận phản hồi ngay sau mỗi Node
             if is_resume:
                 from langgraph.types import Command
-                stream_generator = self.graph.stream(Command(resume=user_text), config)
+                stream_generator = self.graph.stream(Command(resume=user_text), config, stream_mode="updates")
             else:
                 initial_state = NetworkState(
                     messages=[HumanMessage(content=user_text)],
                     target_device=self.device_obj,
                     devices=[self.device_obj]
                 )
-                stream_generator = self.graph.stream(initial_state, config)
+                stream_generator = self.graph.stream(initial_state, config, stream_mode="updates")
 
-            # 2. Vòng lặp xử lý và in dữ liệu
             for chunk in stream_generator:
-                if "extract_data" in chunk:
-                    outputs = chunk["extract_data"].get("command_outputs", {})
+                # --- IN TERMINAL NGAY KHI NETWORK EXPERT CHẠY XONG TOOL ---
+                if "network_expert" in chunk:
+                    # Lấy các tin nhắn mới nhất từ Expert
+                    node_output = chunk["network_expert"]
+                    messages = node_output.get("messages", [])
                     
-                    # Cập nhật GUI log
-                    for tool_name in outputs:
-                        log_text += f"Đã chạy: {tool_name}\n"
-
-                    # --- BẮT ĐẦU IN RAW DATA LÊN TERMINAL ---
-                    if outputs:
-                        import json # Đảm bảo an toàn nếu chưa import ở đầu file
-                        content_width = 120
-                        frame_width = content_width + 4
-                        
-                        print("\n\t\033[96m" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
-                        
-                        title = "║ [RAW DATA] KẾT QUẢ THỰC THI TỪ THIẾT BỊ"
-                        print("\t\033[96m" + title + " "*(frame_width - len(title) - 1) + "║\033[0m")
-                        print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
-                        
-                        tool_count = len(outputs)
-                        current_tool = 0
-                        
-                        for tool_name, result in outputs.items():
-                            current_tool += 1
-                            display_text = str(result)
-                            try:
-                                parsed_data = json.loads(display_text)
-                                if isinstance(parsed_data, dict):
-                                    if parsed_data.get("success") is False:
-                                        display_text = f"LỖI: {parsed_data.get('error', 'Không rõ nguyên nhân')}"
-                                    elif "output" in parsed_data:
-                                        display_text = str(parsed_data["output"])
-                            except Exception:
-                                pass 
-
-                            tool_line = f"Tool đã dùng: {tool_name}"
-                            print("\t\033[96m║ \033[93m" + tool_line.ljust(content_width) + " \033[96m║\033[0m")
-                            print("\t\033[96m║ \033[90m" + "Output:".ljust(content_width) + " \033[96m║\033[0m")
-                            
-                            for line in display_text.split('\n'):
-                                safe_line = line.replace('\r', '')[:content_width] 
-                                print("\t\033[96m║ \033[90m" + safe_line.ljust(content_width) + " \033[96m║\033[0m")
-                            
-                            if current_tool < tool_count:
-                                print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
-
-                        print("\t\033[96m" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m\n")
-                    # --- KẾT THÚC IN RAW DATA LÊN TERMINAL ---
+                    # Lọc ra các ToolMessages (kết quả trả về từ thiết bị)
+                    tool_messages = [m for m in messages if m.type == "tool"]
+                    
+                    if tool_messages:
+                        self.printRawData(tool_messages)
 
                 if "analyst" in chunk:
                     msg = chunk["analyst"].get("messages", [])[-1]
@@ -304,6 +253,36 @@ class NetworkAssistantApp(ctk.CTk):
         except Exception as e:
             self.after(0, self.updateAiRespone, f"Lỗi hệ thống: {str(e)}")
 
+    def printRawData(self, tool_messages):
+        import json
+        content_width = 120
+        frame_width = content_width + 4
+        
+        print("\n\t\033[96m" + "╔" + "═"*(frame_width-2) + "╗" + "\033[0m")
+        title = "║ [RAW DATA] KẾT QUẢ THỰC THI TỪ THIẾT BỊ"
+        print("\t\033[96m" + title + " "*(frame_width - len(title) - 1) + "║\033[0m")
+        
+        for i, msg in enumerate(tool_messages):
+            print("\t\033[96m" + "╠" + "═"*(frame_width-2) + "╣" + "\033[0m")
+            
+            tool_name = getattr(msg, 'name', 'Unknown Tool')
+            display_text = str(msg.content)
+            
+            try:
+                parsed_data = json.loads(display_text)
+                if isinstance(parsed_data, dict) and "output" in parsed_data:
+                    display_text = str(parsed_data["output"])
+            except:
+                pass
+
+            print("\t\033[96m║ \033[93m" + f"Tool: {tool_name}".ljust(content_width) + " \033[96m║\033[0m")
+            print("\t\033[96m║ \033[90m" + "Output:".ljust(content_width) + " \033[96m║\033[0m")
+            
+            for line in display_text.split('\n'):
+                safe_line = line.replace('\r', '')[:content_width] 
+                print("\t\033[96m║ \033[90m" + safe_line.ljust(content_width) + " \033[96m║\033[0m")
+        print("\t\033[96m" + "╚" + "═"*(frame_width-2) + "╝" + "\033[0m\n")
+        
     # Hàm cập nhật phản hồi của AI lên giao diện, ẩn trạng thái loading và kích hoạt lại nút gửi
     def updateAiRespone(self,final_response):
         self.hideLoading()

@@ -8,20 +8,14 @@ import logging
 import warnings
 import time
 import textwrap
-from dotenv import load_dotenv
 from pathlib import Path
 from langchain_core.messages import HumanMessage
 from src.graph.workflow import createNetworkAssistantGraph
 from src.graph.state import NetworkState, DeviceConnection
-
-# --- CONFIGURATION ---
-GNS3_IP = "127.0.0.1"
-GNS3_PORT = "3080"
-BASE_URL = f"http://{GNS3_IP}:{GNS3_PORT}/v2"
-PROJECT_ID = "cc92102e-89e3-4f2d-8e66-47268c496baa"
+from core.config import settings
+from core.connection import GNS3_URL_VERS, GNS3_URL_PRJ
 
 os.environ["LANGCHAIN_TRACING"] = "false"
-load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,17 +32,17 @@ warnings.filterwarnings("ignore", message=".*Deserializing unregistered type.*")
 def checkGNS3Connectivity() -> bool:
     """Kiểm tra kết nối tới GNS3 Server trước khi khởi động Agent"""
     try:
-        response = requests.get(f"{BASE_URL}/version", timeout=5)
+        response = requests.get(GNS3_URL_VERS, timeout=5)
         response.raise_for_status()
         version = response.json().get("version")
         logger.info(f"Kết nối GNS3 Server thành công (v{version})")
-
-        proj_resp = requests.get(f"{BASE_URL}/projects/{PROJECT_ID}", timeout=5)
+        
+        proj_resp = requests.get(GNS3_URL_PRJ, timeout=5)
         if proj_resp.status_code == 200:
             logger.info(f"Project '{proj_resp.json().get('name')}' sẵn sàng.")
             return True
         else:
-            logger.error(f"Không tìm thấy Project ID: {PROJECT_ID}")
+            logger.error(f"Không tìm thấy Project ID: {settings.PROJECT_ID}")
             return False
     except Exception as e:
         logger.error(f"Lỗi kết nối GNS3: {e}")

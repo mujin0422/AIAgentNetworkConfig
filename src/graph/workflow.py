@@ -6,22 +6,19 @@ from src.agents.network_expert import create_network_expert
 from src.agents.analyst import create_analyst
 
 def extractNetworkData(state: NetworkState):
-    """
-    Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs
-    giúp Supervisor nhận diện được dữ liệu đã được thu thập.
-    """
+    """Node trung gian: Trích xuất nội dung từ ToolMessages vào trường command_outputs"""
     messages = state.get("messages", [])
-    new_outputs = {} # Khởi tạo lại từ đầu để xóa dữ liệu cũ của phiên trước
-    
+    new_outputs = {} 
+
     for msg in reversed(messages):
         if msg.type == "tool":
             tool_name = getattr(msg, 'name', 'unknown_tool')
-            # Chỉ lấy kết quả mới nhất nếu 1 tool được gọi nhiều lần
             if tool_name not in new_outputs:
                 new_outputs[tool_name] = msg.content
+
         elif msg.type == "human":
             break
-            
+
     return {
         "command_outputs": new_outputs,
         "current_phase": "collected" if new_outputs else "start"
@@ -56,7 +53,7 @@ def createNetworkAssistantGraph():
     # Khởi tạo đồ thị với NetworkState
     builder = StateGraph(NetworkState)
 
-    # Định nghĩa các Node
+    #  Định nghĩa các Node
     builder.add_node("supervisor", supervisor.route)
     builder.add_node("network_expert", network_expert)
     builder.add_node("extract_data", extractNetworkData)
@@ -65,12 +62,8 @@ def createNetworkAssistantGraph():
 
     # Thiết lập luồng chạy (Edges)
     builder.add_edge(START, "supervisor")
-
-    # Luồng Thu thập: Expert -> Extract -> Quay lại Supervisor kiểm tra
     builder.add_edge("network_expert", "extract_data")
     builder.add_edge("extract_data", "supervisor")
-
-    # Luồng Phân tích: Analyst -> After Analyst (lưu report) -> Quay lại Supervisor để END
     builder.add_edge("analyst", "after_analyst")
     builder.add_edge("after_analyst", "supervisor")
 

@@ -553,3 +553,15 @@ save
 ip 172.16.4.10 255.255.255.0 172.16.4.1
 
 save
+
+
+hostname P3
+ip domain-name aiagent.local
+crypto key generate rsa
+2048
+username admin privilege 15 password 123456
+line vty 0 4
+transport input ssh
+login local 
+exit
+ip ssh version 2
