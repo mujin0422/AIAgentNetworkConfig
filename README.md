@@ -15,6 +15,10 @@ Network AI Assistant là trợ lý AI cho bài toán vận hành, kiểm tra và
   - GUI desktop với `customtkinter`
   - Discord bot để điều khiển từ xa
 
+##  Demo
+
+[![Watch the video](https://img.youtube.com/vi/FEDlMY4MprY/0.jpg)](https://www.youtube.com/watch?v=FEDlMY4MprY)
+
 ## Kiến trúc
 
 Hệ thống được tổ chức quanh workflow LangGraph:
